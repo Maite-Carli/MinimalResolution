@@ -22,6 +22,24 @@ pair `mr_BP` prints, which is `(t-s, s+i)` for `i` the algebraic Novikov
 filtration. See [`docs/CHARTS.md`](docs/CHARTS.md) for the grading
 convention, which classes are drawn and why, and the current limitations.
 
+## Checking a two-cell complex against the sphere
+
+There is no published E<sub>2</sub> chart for `S/α₁` to compare
+`mr_BP_comod`'s output with, but the cofiber sequence determines it from the
+sphere's page: the connecting map of the long exact sequence is
+multiplication by α₁, so the answer is `coker(α₁)` on the bottom cell plus
+`ker(α₁)` shifted four stems for the top cell. `ses_check.py` carries that
+comparison out from finished runs:
+
+```sh
+./BPtab 35 && ./mr_BP_comod 35 12 sphere && ./mr_BP_comod 35 12 alpha_1
+./ses_check.py 35 -c alpha_1     # 21 bidegrees, all sharp, 0 mismatches
+```
+
+[`docs/SES_CHECK.md`](docs/SES_CHECK.md) derives this, and in particular
+explains where the *non-split* comodule structure of `BP_*(S/α₁)` enters — it
+is carried entirely by that connecting map.
+
 ## Documentation
 
 This codebase had no architecture documentation beyond this README and
