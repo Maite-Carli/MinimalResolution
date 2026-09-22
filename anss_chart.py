@@ -293,8 +293,13 @@ def mark_glyph(m, r, opts):
     bound.
     """
     x, y = m['px'], m['py']
+    note = ''
+    if m.get('cohabitants', 1) > 1:
+        note = (f' -- splitting NOT determined: {m["cohabitants"]} summands '
+                f'drawn in this bidegree, and a hidden extension could merge '
+                f'them into a bigger cyclic group')
     title = (f'<title>{esc(pretty(m["name"]))}  {esc(m["group"])}  '
-             f'(stem {m["stem"]}, s={m["s"]})</title>')
+             f'(stem {m["stem"]}, s={m["s"]}){esc(note)}</title>')
     if m['kind'] == 'box':
         side = 2 * r
         body = (f'<rect x="{x - r:.1f}" y="{y - r:.1f}" width="{side:.1f}" '
@@ -571,6 +576,15 @@ def main():
             sys.stderr.write(f'note: {base}AANSS_a0.txt not found; every '
                              f'class drawn as its own Z/3\n')
         marks, owner = build_marks(classes, a0)
+        # A bidegree holding more than one chain is the one case where the
+        # data does not settle the group: multiplication by 3 is recorded
+        # only up to algebraic Novikov filtration, so a product that jumps
+        # filtration could join two of the chains drawn here.
+        per_cell = defaultdict(int)
+        for m in marks:
+            per_cell[(m['stem'], m['s'])] += 1
+        for m in marks:
+            m['cohabitants'] = per_cell[(m['stem'], m['s'])]
         diffs, towers = [], []
         # h0-multiplication between summands: redirect each class to its mark
         struct, seen = [], set()
@@ -629,6 +643,17 @@ def main():
               f'{kinds["circles"]} Z/3^n (rings), of which {trunc} have the '
               f'top of the tower cut off by the range (dashed); '
               f'{len(struct)} alpha_1 lines -> {out}')
+        cells = defaultdict(list)
+        for m in marks:
+            cells[(m['stem'], m['s'])].append(m)
+        shared = sum(1 for ms in cells.values() if len(ms) > 1)
+        cut = sum(1 for ms in cells.values()
+                  if len(ms) == 1 and ms[0]['truncated'])
+        print(f'groups: {len(cells) - shared - cut} bidegree(s) pinned down '
+              f'exactly (a single 3-tower, terminating inside the range), '
+              f'{cut} known only as a lower bound (tower truncated), '
+              f'{shared} holding more than one summand, where a hidden '
+              f'extension could merge them -- see CHARTS.md section 2')
     else:
         print(f'{len(marks)} classes (stems {min(stems)}-{max(stems)}), '
               f'{len(struct)} alpha_1 lines, {len(towers)} 3-tower lines, '

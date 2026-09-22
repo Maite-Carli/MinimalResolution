@@ -114,6 +114,35 @@ that survives — its predecessor <code>[1-1]</code> supports a d₂ — and it 
 generator of the <code>Z/9</code> in stem 11. A syntactic filter would hide it.</p>
 <p>If the <code>a0</code> file is missing the script says so and draws every class as a
 plain dot, since without it no isomorphism type is knowable.</p>
+<h3 id="what-the-glyph-proves-and-what-it-assumes">What the glyph proves, and what it assumes<a class="heading-anchor" href="#what-the-glyph-proves-and-what-it-assumes">#</a></h3>
+<p>The two halves of the evidence behave differently, so it is worth being
+precise about which conclusions are theorems:</p>
+<ul>
+<li><strong>A non-zero <code>a0</code> entry is sound.</strong> It says the leading term of <code>3x</code> is non-zero, hence <code>3x ≠ 0</code> in <code>Ext</code>. So a chain of length <code>n</code> exhibits an element of order <code>3^n</code>: a <strong>lower</strong> bound.</li>
+<li><strong>A <code>-&gt; o</code> entry is not.</strong> It says the leading term of <code>3x</code> vanishes, which means either <code>3x = 0</code> or <code>3x</code> has jumped further up the algebraic Novikov filtration than the table can see — a hidden extension.</li>
+<li><strong>The class count is exact.</strong> The surviving classes are an F₃-basis of <code>gr Ext</code>, so a bidegree with <code>n</code> of them has length exactly <code>n</code>.</li>
+</ul>
+<p>Put together: <strong>when one chain accounts for every class in a bidegree, the
+group is pinned down</strong>, because a group of length <code>n</code> containing an element
+of order <code>3^n</code> is cyclic. That is how <code>S/α₁</code> gets <code>Z/9</code> in (7,1) and <code>Z/27</code>
+in (11,1) rather than <code>Z/3 ⊕ Z/3</code> and <code>Z/9 ⊕ Z/3</code> — those have no element of
+the required order, and the <code>a0</code> chain exhibits one.</p>
+<p>When a bidegree holds <strong>more than one</strong> chain, the splitting drawn is only
+the finest possibility: a hidden extension could merge two of the marks into
+one bigger cyclic group. The script says how many bidegrees are in each
+state after every run, and the tooltip of any mark sharing its bidegree says
+so explicitly. At <code>halfT=35</code> all 15 of the sphere's bidegrees and all 14 of
+<code>S/α₁</code>'s are pinned down exactly; at <code>halfT=185, L=14</code> the sphere has 168
+pinned down, 37 known only as lower bounds (truncated towers) and 64 holding
+several summands.</p>
+<p>The repo does contain an independent record of this: the Bockstein tables
+<code>&lt;prefix&gt;BocSS_table.txt</code> are the <code>v_0</code>-Bockstein spectral sequence, whose
+<code>d_r</code> differentials are exactly the <code>p</code>-divisibility data, with
+<code>&lt;prefix&gt;B2A_table.txt</code> translating Bockstein names to algebraic Novikov
+ones. For <code>S/α₁</code> those tables confirm both orders above — <code>v0^2[1-0]</code> dies by
+a <code>d2</code> and <code>v0^3[1-1]</code> by a <code>d3</code> — and they are the natural place to look for
+the ambiguous bidegrees. The chart does not read them, for the grading
+reason in §4.</p>
 <h2 id="3-structure-lines">3. Structure lines<a class="heading-anchor" href="#3-structure-lines">#</a></h2>
 <p>Solid tan lines are multiplication by <code>h0 = (η_R(v1) - η_L(v1))/p</code> = α₁,
 read from <code>&lt;prefix&gt;AANSS_h0.txt</code>, so they run <code>(+3, +1)</code> — slope 1/3, as in
