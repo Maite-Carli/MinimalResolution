@@ -428,6 +428,21 @@ def render(marks, diffs, struct, towers, opts):
         if ln:
             o.append(ln)
 
+    if opts.bound and ykey == 's':
+        # The run computes internal degree t = stem + s up to the degree
+        # bound, so what it cuts off is a DIAGONAL, not the top of the
+        # y-axis: (31,1) is in range at t=32 while (30,6) is not, at t=36.
+        T = opts.bound
+        xa, xb = max(x0, T - y1), min(x1, T - y0)
+        if xa <= xb:
+            o.append(f'<line x1="{X(xa):.1f}" y1="{Y(T - xa):.1f}" '
+                     f'x2="{X(xb):.1f}" y2="{Y(T - xb):.1f}" '
+                     f'stroke="{C_AXIS}" stroke-width="0.8" '
+                     f'stroke-dasharray="4,4" opacity="0.55"/>')
+            o.append(f'<text x="{X(xb) - 4:.1f}" y="{Y(T - xb) - 5:.1f}" '
+                     f'font-size="8" text-anchor="end" fill="{C_TEXT}" '
+                     f'opacity="0.8">t = {T} (degree bound)</text>')
+
     for m in sorted(marks, key=lambda m: (m['stem'], m[ykey])):
         o.append(mark_glyph(m, base_r, opts))
 
@@ -502,6 +517,9 @@ def main():
                     help='omit the class names next to the marks')
     ap.add_argument('--no-legend', dest='legend', action='store_false',
                     help='omit the box/dot/circles key under the axis')
+    ap.add_argument('--no-bound', dest='bound', action='store_false',
+                    help='omit the dashed t = <halfT> line marking where the '
+                         'degree bound cuts the page off')
     ap.add_argument('--label-size', type=float, default=5.5,
                     help='font size for the class names (default 5.5)')
     ap.add_argument('--raw-labels', action='store_true',
@@ -525,6 +543,11 @@ def main():
     ap.add_argument('--title', default=None)
     ap.add_argument('--no-title', action='store_true')
     a = ap.parse_args()
+    if a.bound:                                  # the degree bound to draw
+        try:
+            a.bound = int(a.halfT)
+        except ValueError:
+            a.bound = None
 
     base = os.path.join(a.dir, f'{a.halfT}_{a.comodule}BP')
     table = base + 'AANSS_table.txt'
@@ -610,8 +633,10 @@ def main():
         print(f'{len(marks)} classes (stems {min(stems)}-{max(stems)}), '
               f'{len(struct)} alpha_1 lines, {len(towers)} 3-tower lines, '
               f'{len(diffs)} differentials -> {out}')
-    print('note: classes near the top stems are cut off by the degree bound, '
-          'not absent.')
+    print(f'note: this run computes internal degree t = stem + s up to '
+          f'{a.halfT}, so the page is cut off along a diagonal (drawn '
+          f'dashed), not at the top of either axis. Filtration is capped '
+          f'separately by the resolution length: s + i < that argument.')
 
 
 if __name__ == '__main__':

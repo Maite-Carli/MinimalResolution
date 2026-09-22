@@ -152,15 +152,31 @@ For `S/α₁` the same chart has boxes in stems 0 **and 4** and nothing in
 stems 3, 13, 23, 29 — see [`SES_CHECK.md`](SES_CHECK.md), which checks the
 whole page against the sphere's automatically.
 
-## 6. Truncation
+## 6. Truncation: the page is cut off along a diagonal
 
-Classes near the top stems are missing because of the degree bound, not
-because they are absent — `mr_BP` prints things like `out of range for beta1`
-when a needed class falls outside the budget. The chart cannot tell the
-difference, so treat the right-hand edge as unreliable and crop it with
-`--max-stem` when showing the chart to anyone. The same applies upwards in
-filtration: `s + i` is capped by `mr_BP`'s second argument, which is what
-the dashed rings of §2 are about.
+Neither axis is what limits the picture, and the y-axis is not capped at all
+— it grows to fit whatever the run produced. **What cuts the page off is the
+degree bound, and since `t = stem + s` that boundary is a diagonal.** The
+chart draws it as a dashed line labelled `t = <halfT>` (`--no-bound` to hide
+it); everything beyond it is missing because it was never computed.
+
+This is worth internalising, because it is not where the eye expects the
+edge. At `halfT=35` the sphere has a class in stem **31** (`v1^7[1-0]`, `s=1`,
+so `t = 32 ≤ 35`) but *not* in stem **30** — β₁³ = `[6-0]` lives at `s = 6`,
+so `t = 36 > 35`. Re-running with `./mr_BP_comod 40 12 sphere` produces it,
+along with α₁β₁³ = `[7-0]` at `(33,7)`, and the y-axis extends to 7 by
+itself. So:
+
+- a missing class high up the chart usually means **raise the first
+  argument** (the internal-degree bound), not the second;
+- the second argument still matters independently: filtration is capped by
+  `s + i <` resolution length, which is what the dashed rings of §2 are
+  about, and a class at filtration `s` needs a resolution at least that long.
+
+Near the boundary `mr_BP` also prints things like `out of range for beta1`
+when a needed class falls outside the budget, so treat the last stems before
+the line as unreliable too, and crop with `--max-stem` when showing the chart
+to anyone.
 
 ## 7. Options
 
@@ -174,6 +190,7 @@ the dashed rings of §2 are about.
 | `--raw-labels` | label with the table text verbatim (`v1^3[1-0]`) |
 | `--label-size` | font size for the names (default 5.5) |
 | `--no-legend` | drop the glyph key under the axis |
+| `--no-bound` | drop the dashed `t = <halfT>` degree-bound diagonal (§6) |
 | `--max-rings` | most rings drawn before the order is written beside the mark (default 4) |
 | `--ring-gap` | px between rings (default 2.0) |
 | `--omit-stem0` | drop `Ext^0` in stem 0, as the published charts do |

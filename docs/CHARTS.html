@@ -149,14 +149,26 @@ order <code>3^j</code>, and <code>j = 2</code> precisely when <code>3 | i</code>
 <p>For <code>S/α₁</code> the same chart has boxes in stems 0 <strong>and 4</strong> and nothing in
 stems 3, 13, 23, 29 — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a>, which checks the
 whole page against the sphere's automatically.</p>
-<h2 id="6-truncation">6. Truncation<a class="heading-anchor" href="#6-truncation">#</a></h2>
-<p>Classes near the top stems are missing because of the degree bound, not
-because they are absent — <code>mr_BP</code> prints things like <code>out of range for beta1</code>
-when a needed class falls outside the budget. The chart cannot tell the
-difference, so treat the right-hand edge as unreliable and crop it with
-<code>--max-stem</code> when showing the chart to anyone. The same applies upwards in
-filtration: <code>s + i</code> is capped by <code>mr_BP</code>'s second argument, which is what
-the dashed rings of §2 are about.</p>
+<h2 id="6-truncation-the-page-is-cut-off-along-a-diagonal">6. Truncation: the page is cut off along a diagonal<a class="heading-anchor" href="#6-truncation-the-page-is-cut-off-along-a-diagonal">#</a></h2>
+<p>Neither axis is what limits the picture, and the y-axis is not capped at all
+— it grows to fit whatever the run produced. <strong>What cuts the page off is the
+degree bound, and since <code>t = stem + s</code> that boundary is a diagonal.</strong> The
+chart draws it as a dashed line labelled <code>t = &lt;halfT&gt;</code> (<code>--no-bound</code> to hide
+it); everything beyond it is missing because it was never computed.</p>
+<p>This is worth internalising, because it is not where the eye expects the
+edge. At <code>halfT=35</code> the sphere has a class in stem <strong>31</strong> (<code>v1^7[1-0]</code>, <code>s=1</code>,
+so <code>t = 32 ≤ 35</code>) but <em>not</em> in stem <strong>30</strong> — β₁³ = <code>[6-0]</code> lives at <code>s = 6</code>,
+so <code>t = 36 &gt; 35</code>. Re-running with <code>./mr_BP_comod 40 12 sphere</code> produces it,
+along with α₁β₁³ = <code>[7-0]</code> at <code>(33,7)</code>, and the y-axis extends to 7 by
+itself. So:</p>
+<ul>
+<li>a missing class high up the chart usually means <strong>raise the first argument</strong> (the internal-degree bound), not the second;</li>
+<li>the second argument still matters independently: filtration is capped by <code>s + i &lt;</code> resolution length, which is what the dashed rings of §2 are about, and a class at filtration <code>s</code> needs a resolution at least that long.</li>
+</ul>
+<p>Near the boundary <code>mr_BP</code> also prints things like <code>out of range for beta1</code>
+when a needed class falls outside the budget, so treat the last stems before
+the line as unreliable too, and crop with <code>--max-stem</code> when showing the chart
+to anyone.</p>
 <h2 id="7-options">7. Options<a class="heading-anchor" href="#7-options">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -198,6 +210,10 @@ the dashed rings of §2 are about.</p>
 <tr>
 <td><code>--no-legend</code></td>
 <td>drop the glyph key under the axis</td>
+</tr>
+<tr>
+<td><code>--no-bound</code></td>
+<td>drop the dashed <code>t = &lt;halfT&gt;</code> degree-bound diagonal (§6)</td>
 </tr>
 <tr>
 <td><code>--max-rings</code></td>
