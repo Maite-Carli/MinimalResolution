@@ -219,6 +219,13 @@ sphere class at <code>deg=(a,b)</code>, classes at <code>(a,b)</code> and <code>
 else. At <code>halfT=20, length=4</code> that holds exactly: 11 sphere classes → 22,
 with the degree multiset matching term for term, and the single <code>d2</code>
 doubling to two.</p>
+<p>Both of these are one-line versions of a check that can be made complete.
+For a two-cell complex the cofiber sequence pins down the <em>whole</em> page from
+the sphere&#39;s, bidegree by bidegree — the connecting map of the long exact
+sequence is multiplication by the class detecting the attaching map, which
+is where the non-split comodule structure enters. <code>ses_check.py</code> runs that
+comparison automatically (<code>./ses_check.py 35 -c alpha_1</code>); see
+<a href="SES_CHECK.html">SES_CHECK.md</a>.</p>
 <p>Find the analogous prediction for your own complex before trusting its
 output; it is the only check that can catch a wrong coaction matrix, since
 nothing verifies the comodule axioms.</p>

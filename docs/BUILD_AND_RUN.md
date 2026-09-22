@@ -54,11 +54,25 @@ sh st_compiling      # -> mr_st (produces the seed generators mr_BP needs)
 - `argv[1]` (here `25`) **must be the same value** across all three
   invocations — it's used directly as the max internal degree cutoff and
   determines the filenames each program looks for.
-- The README calls `argv[1]` "half of `t`" — the max degree by which
-  everything is truncated. Per `docs/pipelines/BP.md` §2.2, the *code itself*
-  doesn't visibly halve anything again; treat this as the project's grading
-  convention for choosing what value to pass, not a further transformation
-  the programs perform.
+- `argv[1]` is the **maximal internal degree `t`**, not half of it. Degrees
+  here are full topological degrees — `xnDeg(n) = 2(3^n - 1)`
+  (`exponents.cpp:31`), so `|v_1| = |t_1| = 4` — and `monomial_index` keeps
+  every monomial of degree `d <= argv[1]` (`mon_index.cpp:44`), on the BP
+  side (`BP.cpp:8`) and the Steenrod side (`steenrod.cpp:5`) alike. A class
+  of internal degree `t` therefore needs `argv[1] >= t`; in chart terms
+  (`CHARTS.md` §1) that is `stem + s >= t`, since `t = (t-s) + s`.
+  Sanity check: `./mr_st 24 6` tops out at generator degree 24, and
+  `./mr_BP_comod 24 8` has `[4-0] |deg=(20,4)` (`beta_1^2`, stem 20,
+  filtration 4, internal degree 24) while the same run at 23 stops at
+  `t = 20`.
+  The README's original "half of `t`" warning is a carry-over from Guozhen
+  Wang's p=2 code (not in this repo to check against). It does not hold in
+  this p=3 fork, and the README now says so.
+- Only the generators with `|v_n| <= argv[1]` are built at all
+  (`mon_index.cpp:12-15`, used at `BPtable.cpp:12`), so `v_2`/`t_2` first
+  exist at `argv[1] >= 16` and `v_3`/`t_3` at `>= 52`. Below 16 the
+  computation is the `t_1`-only truncation, which is why very small runs
+  look suspiciously empty rather than wrong.
 - `mr_BP`'s second argument (`20` above) is the resolution length `s`; the
   README requires it to be **at least one less than** the `s` used for
   `mr_st`'s second argument (`mr_st`'s `21` above), matching the BP/I ↔ BP
@@ -145,11 +159,15 @@ sh tauboc_compile              # -> tauBoc
 
 ## Degree-parameter conventions, summarized
 
-- All primary executables: `argv[1]` = max internal degree cutoff (the
-  README calls it "half of `t`" as a project convention — see caveats
-  above), `argv[2]` = resolution length `s` (number of resolution steps),
-  except `BPtab` and `motTab`/`e2p`, which take only the degree argument
-  (they don't run a resolution themselves).
+- All primary executables: `argv[1]` = max internal degree `t` (full
+  topological degrees, `|v_n| = |t_n| = 2(3^n - 1)` — *not* half of `t`, see
+  Pipeline 1 above), `argv[2]` = resolution length `s` (number of resolution
+  steps), except `BPtab` and `motTab`/`e2p`, which take only the degree
+  argument (they don't run a resolution themselves).
+- The placeholder `<halfT>` used throughout these docs, in the output
+  filenames (`<halfT>_BPAANSS_table.txt`) and in `anss_chart.py`/
+  `ses_check.py`'s CLI is a **misnomer** kept for consistency with those
+  filenames: its value is `t`, not `t/2`.
 - Always use the **same degree argument** across every tool in a pipeline
   run — this is how they find each other's output files (no other linkage
   mechanism exists).

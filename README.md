@@ -17,10 +17,34 @@ from a finished `mr_BP` run (Python 3, no dependencies, nothing recomputed):
 ./anss_chart.py 35            # -> 35_anss_E2.svg
 ```
 
-Dots are plotted at `(t-s, s)`, one per generator — note this is *not* the
-pair `mr_BP` prints, which is `(t-s, s+i)` for `i` the algebraic Novikov
-filtration. See [`docs/CHARTS.md`](docs/CHARTS.md) for the grading
-convention, which classes are drawn and why, and the current limitations.
+Marks are plotted at `(t-s, s)` — note this is *not* the pair `mr_BP` prints,
+which is `(t-s, s+i)` for `i` the algebraic Novikov filtration. There is one
+mark per **cyclic summand**, not per class, following the convention of the
+published p=3 charts: a filled square marked ∞ for `Z_(3)`, a filled dot for
+`Z/3`, a dot inside `n-1` rings for `Z/3^n` (the 3-multiplications come from
+the `a0` table), and a dashed outer ring where the range cuts a tower off.
+Each mark is labelled with its generator's name from the table
+(`v₀v₁³[1-1]`), and tan slope-1/3 lines are multiplication by α₁. Works for
+any comodule via `-c`. See [`docs/CHARTS.md`](docs/CHARTS.md) for the full
+convention and the limitations.
+
+## Checking a two-cell complex against the sphere
+
+There is no published E<sub>2</sub> chart for `S/α₁` to compare
+`mr_BP_comod`'s output with, but the cofiber sequence determines it from the
+sphere's page: the connecting map of the long exact sequence is
+multiplication by α₁, so the answer is `coker(α₁)` on the bottom cell plus
+`ker(α₁)` shifted four stems for the top cell. `ses_check.py` carries that
+comparison out from finished runs:
+
+```sh
+./BPtab 35 && ./mr_BP_comod 35 12 sphere && ./mr_BP_comod 35 12 alpha_1
+./ses_check.py 35 -c alpha_1     # 21 bidegrees, all sharp, 0 mismatches
+```
+
+[`docs/SES_CHECK.md`](docs/SES_CHECK.md) derives this, and in particular
+explains where the *non-split* comodule structure of `BP_*(S/α₁)` enters — it
+is carried entirely by that connecting map.
 
 ## Documentation
 
@@ -56,15 +80,15 @@ sh BP_compile
 
 *******************************************************************************************************
 
-To get the minimal resolution for BP/I, for t<=50, s<=21 (say), run
+To get the minimal resolution for BP/I, for t<=25, s<=21 (say), run
 
 ./mr_st 25 21
 
-To get the structure maps of the BP Hopf algebroid for t<=50, run
+To get the structure maps of the BP Hopf algebroid for t<=25, run
 
 ./BPtab 25
 
-To get the minimal resolution for BP, for t<=50, s<=20, run
+To get the minimal resolution for BP, for t<=25, s<=20, run
 
 ./mr_BP 25 20
 
@@ -72,7 +96,7 @@ To get the minimal resolution for BP, for t<=50, s<=20, run
 
 Warning:
 
-The first input parameter is half of t.
+The first input parameter is the maximal internal degree t.
 
 The three executalbes are dependent, and should be run in the above order. 
 
@@ -80,4 +104,23 @@ The s for the minimal resolution for BP/I should be at least one larger than the
 
 Any mistake of the input could result in unpredictible behaviour, usually a break-down of the program such as a segmentation error.
 
-[EB: the p=3 version may have different restrictions on the degrees, but I haven't thought about what the rule should be.]
+[EB asked here whether the p=3 version has different restrictions on the
+degrees. It does: this fork's first parameter is the internal degree t
+itself, not half of it, so the three examples above are truncated at t<=25
+rather than t<=50. Guozhen's original text said "half of t"; that is a p=2
+carry-over (the p=2 code is not in this repo to check against, but its
+degrees 2(2^n - 1) are all even, so a halved convention there is plausible).
+Here exponents.cpp:31 holds the full topological degrees
+|v_n| = |t_n| = 2(3^n - 1), so |v_1| = 4, and monomial_index keeps every
+monomial of degree d <= argv[1] (mon_index.cpp:44) on both the BP side
+(BP.cpp:8) and the Steenrod side (steenrod.cpp:5).
+
+Verified: ./mr_st 24 6 tops out at generator degree 24, and ./mr_BP_comod
+24 8 produces classes of internal degree t = 24 (beta_1^2 = [4-0], printed
+|deg=(20,4)), while the same run at 23 stops at t = 20. A degree-t class
+needs argv[1] >= t, and note that only the v_n/t_n with |v_n| <= argv[1] are
+built at all (mon_index.cpp:12-15, used at BPtable.cpp:12), so v_2/t_2 first
+appear at 16 and v_3/t_3 at 52.
+
+Classes are printed as |deg=(t-s, s+i): the stem t-s, then the homological
+degree s plus the algebraic Novikov filtration i. See docs/CHARTS.md.]
