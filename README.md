@@ -17,10 +17,16 @@ from a finished `mr_BP` run (Python 3, no dependencies, nothing recomputed):
 ./anss_chart.py 35            # -> 35_anss_E2.svg
 ```
 
-Dots are plotted at `(t-s, s)`, one per generator — note this is *not* the
-pair `mr_BP` prints, which is `(t-s, s+i)` for `i` the algebraic Novikov
-filtration. See [`docs/CHARTS.md`](docs/CHARTS.md) for the grading
-convention, which classes are drawn and why, and the current limitations.
+Marks are plotted at `(t-s, s)` — note this is *not* the pair `mr_BP` prints,
+which is `(t-s, s+i)` for `i` the algebraic Novikov filtration. There is one
+mark per **cyclic summand**, not per class, following the convention of the
+published p=3 charts: a filled square marked ∞ for `Z_(3)`, a filled dot for
+`Z/3`, a dot inside `n-1` rings for `Z/3^n` (the 3-multiplications come from
+the `a0` table), and a dashed outer ring where the range cuts a tower off.
+Each mark is labelled with its generator's name from the table
+(`v₀v₁³[1-1]`), and tan slope-1/3 lines are multiplication by α₁. Works for
+any comodule via `-c`. See [`docs/CHARTS.md`](docs/CHARTS.md) for the full
+convention and the limitations.
 
 ## Checking a two-cell complex against the sphere
 

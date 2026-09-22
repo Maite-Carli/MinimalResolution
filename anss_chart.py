@@ -12,36 +12,61 @@ recomputed and nothing needs to be rebuilt.
     <halfT>_BPAANSS_a0.txt       multiplication by 3
     <halfT>_BPAANSS_h0.txt       multiplication by h0 = alpha_1
 
+Any comodule resolved by mr_BP_comod works the same way via -c/--comodule;
+nothing below is specific to the sphere.
+
 Grading
 -------
 Default (--grading anss) plots the Adams-Novikov bidegree (t-s, s): the stem
-on the x-axis and the homological degree s on the y-axis, one dot per
-generator, no 3-towers.  This is the convention used in the published ANSS
-charts, and it is NOT the pair mr_BP prints.  mr_BP's "|deg=(a,b)" has
-b = s + i, where i is the algebraic Novikov filtration (algNov.cpp:118), so
-alpha_2 = v1^1[1-0] is printed at height 2 but belongs at height 1.  The
-s used here is read off the "[s-n]" bracket in the class name instead; the
-printed stem a is used as-is.
+on the x-axis and the homological degree s on the y-axis.  This is the
+convention used in the published ANSS charts, and it is NOT the pair mr_BP
+prints.  mr_BP's "|deg=(a,b)" has b = s + i, where i is the algebraic Novikov
+filtration (algNov.cpp:118), so alpha_2 = v1^1[1-0] is printed at height 2
+but belongs at height 1.  The s used here is read off the "[s-n]" bracket in
+the class name instead; the printed stem a is used as-is.
 
---grading algnov plots mr_BP's own (a, b) pair instead, keeps the 3-multiples,
-and draws them as vertical 3-towers plus the algebraic Novikov differentials.
-That is the right picture for debugging a run; it is not an ANSS chart.
+--grading algnov plots mr_BP's own (a, b) pair instead, one dot per class,
+keeps the 3-multiples as vertical towers, and draws the algebraic Novikov
+differentials.  That is the right picture for debugging a run; it is not an
+ANSS chart.
+
+What one mark means (--grading anss)
+------------------------------------
+One mark per cyclic summand, not per F_3 basis element: the classes in the
+table are a basis of gr Ext, so a Z/9 shows up as two of them and would be
+two dots on a naive chart.  Multiplication by 3 is exactly what the a0 table
+records, so the summands are recovered by chaining a0 edges.  The glyphs
+follow Belmont's published 3-primary ANSS chart:
+
+    filled square, marked oo    Z_(3)
+    filled dot                  Z/3
+    dot inside n-1 rings        Z/3^n
+    dashed outermost ring       the tower runs off the end of the computed
+                                range, so the order shown is a lower bound
+
+Several summands in one bidegree are drawn side by side, each labelled with
+the name of its generator (the class the rest of the tower is 3 times).
+Labels are the table's own names, typeset as v_0v_1^3[1-1] rather than
+v0^1v1^3[1-1]; --raw-labels keeps the raw text and --no-labels drops them.
+
+Filtration 0 is always drawn as Z_(3), by mathematics rather than by the
+table: Ext^0 = Prim(M) is a submodule of a free BP_*-module, hence
+torsion-free.  Above filtration 0 the order comes from the a0 chain, and
+where that chain hits the truncation (b = s + i is cut off at the resolution
+length, see docs/CHARTS.md) the mark gets the dashed ring.
 
 Which classes are on the E2 page
 --------------------------------
 The algebraic Novikov SS converges to Ext_{BP*BP} = the ANSS E2 page, so a
 class belongs on the chart exactly when it survives that spectral sequence:
+lines of the form "cycle <- tag |dr" record a differential, and both the
+cycle and the tag die, so both are dropped.  (The tag never gets a line of
+its own -- SS_table::output, SS.h:139-146, only emits untagged entries -- so
+dropping the "<-" lines removes both.)
 
-  * Lines of the form "cycle <- tag |dr" record a differential.  Both the
-    cycle and the tag die, so both are dropped.  (The tag never gets a line
-    of its own -- SS_table::output, SS.h:139-146, only emits untagged
-    entries -- so dropping the "<-" lines removes both.)
-  * A class that appears as a *target* in the multiplication-by-3 table is
-    3 times another class, i.e. a step up a 3-tower rather than a generator,
-    so it is dropped too.  Note this is a data question, not a syntactic one:
-    v0^1[1-1] carries a v0 in its name but is not a 3-multiple of anything
-    surviving (its would-be predecessor [1-1] supports a differential), and
-    it is exactly alpha_3 in stem 11.  Filtering on the name would delete it.
+Unlike the previous version of this script, 3-multiples are NOT dropped:
+they are what determines each summand's isomorphism type, and they are now
+drawn as part of one mark.
 """
 
 import argparse
@@ -118,38 +143,206 @@ def parse_mult(path):
     return edges
 
 
-# ------------------------------------------------------------- selection
+def parse_mult_detail(path):
+    """Return source -> [targets] for every source the table states.
 
-def e2_page(classes, a0_edges):
-    """Restrict to what survives to the ANSS E2 page (see module docstring)."""
-    three_multiples = {t for _, t in a0_edges}
-    return {n: c for n, c in classes.items()
-            if not c['killed'] and n not in three_multiples}
+    A source missing from the result had no line at all, which is *unknown*
+    rather than zero: the tables are pruned by homological degree
+    (multiplication.cpp:169).  A source mapping to [] is a stated zero.
+    """
+    if not os.path.exists(path):
+        return None
+    products = {}
+    with open(path) as fh:
+        for line in fh:
+            m = MULT_RE.match(line.rstrip('\n'))
+            if not m:
+                continue
+            products[m['src']] = [t for t in m['targets'].split('+') if t]
+    return products
+
+
+# ------------------------------------------------------- cyclic summands
+
+def build_marks(classes, a0_products):
+    """Group the surviving classes into cyclic summands, one mark each.
+
+    Follows multiplication-by-3 chains: a class that is not 3 times any
+    surviving class generates a summand, and the chain of its 3-multiples
+    gives the order.  Returns a list of marks and a name -> mark index map.
+    """
+    surv = {n: c for n, c in classes.items() if not c['killed']}
+    maxb = max((c['algnov'] for c in surv.values()), default=0)
+    if a0_products is None:
+        # No multiplication-by-3 table: the isomorphism types are simply not
+        # knowable, so draw every class as a plain dot rather than inventing
+        # towers (the caller has already warned about this).
+        marks = [make_mark(c, [n], True) for n, c in surv.items()]
+        return marks, {m['name']: i for i, m in enumerate(marks)}
+    prod = a0_products
+
+    # only edges out of a surviving class count; a 3-multiple of something
+    # that died is a generator in its own right (CHARTS.md section 2)
+    is_multiple = {t for src, ts in prod.items() if src in surv
+                   for t in ts if t in surv}
+
+    marks, owner, seen = [], {}, set()
+    order = sorted(surv, key=lambda n: (surv[n]['stem'], surv[n]['s'],
+                                        surv[n]['algnov'], n))
+    for name in order:
+        if name in seen or name in is_multiple:
+            continue
+        chain, cur, bounded = [name], name, None
+        seen.add(name)
+        while True:
+            ts = prod.get(cur)
+            if ts is None:                       # no line: top not visible
+                bounded = False
+                break
+            if not ts:                           # stated "-> o": tower ends
+                bounded = True
+                break
+            nxt = ts[0]
+            if len(ts) != 1 or nxt not in surv or nxt in seen:
+                bounded = False                  # not a simple chain
+                break
+            chain.append(nxt)
+            seen.add(nxt)
+            cur = nxt
+        if bounded and surv[chain[-1]]['algnov'] >= maxb:
+            bounded = False                      # ends at the truncation edge
+        marks.append(make_mark(surv[name], chain, bounded))
+        for member in chain:
+            owner[member] = len(marks) - 1
+
+    for name in order:                           # defensive: nothing orphaned
+        if name not in owner:
+            marks.append(make_mark(surv[name], [name], True))
+            owner[name] = len(marks) - 1
+    return marks, owner
+
+
+def make_mark(gen, chain, bounded):
+    """Classify one summand.
+
+    s = 0 is decided by mathematics, not by the tables: Ext^0 = Prim(M) is a
+    submodule of a free BP_*-module, hence torsion-free, so every summand
+    there is Z_(3) -- a box, whatever the a0 table can or cannot see.
+
+    Above filtration 0 the order is read off the a0 chain.  If the chain runs
+    into the truncation (its top has no a0 line, or sits in the last
+    filtration the run prints) the visible length is only a lower bound, so
+    the mark is drawn with a dashed outer ring and reported as ">=".
+    """
+    n = len(chain)
+    if gen['s'] == 0:
+        kind, group, trunc = 'box', 'Z_(3)', False
+    elif bounded:
+        kind, group, trunc = ('dot' if n == 1 else 'circles'), f'Z/3^{n}', False
+        if n == 1:
+            group = 'Z/3'
+    else:
+        kind, group, trunc = 'circles', f'>= Z/3^{n} (truncated)', True
+    return dict(name=gen['name'], stem=gen['stem'], s=gen['s'],
+                algnov=gen['algnov'], kind=kind, n=n, group=group,
+                truncated=trunc, members=chain)
 
 
 # --------------------------------------------------------------- drawing
 
-# Colours sampled from the reference chart.
+# Colours sampled from the reference chart (Belmont's 3-primary ANSS chart).
 C_GRID = '#e6e6e6'
 C_AXIS = '#9a9a9a'
-C_DOT = '#7dded9'
+C_DOT = '#808080'
+C_EDGE = '#6e6e6e'
 C_DOT_TOWER = '#979797'
 C_STRUCT = '#e8d9c5'
 C_DIFF = '#c294f0'
 C_TEXT = '#666666'
+C_LABEL = '#444444'
+
+SUB = str.maketrans('0123456789', '₀₁₂₃₄'
+                                  '₅₆₇₈₉')
+SUP = str.maketrans('0123456789', '⁰¹²³⁴'
+                                  '⁵⁶⁷⁸⁹')
 
 
 def esc(s):
     return (s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
 
 
-def render(classes, diffs, struct, towers, opts):
+def pretty(name):
+    """v0^1v1^3[1-1] -> v(0)v(1)^3[1-1] with real sub/superscripts.
+
+    Same names the tables use, typeset the way the published charts do: the
+    generator index drops to a subscript and an exponent of 1 is left off.
+    """
+    def repl(m):
+        idx, exp = m.group(1), m.group(2)
+        out = 'v' + idx.translate(SUB)
+        return out if exp == '1' else out + exp.translate(SUP)
+    return re.sub(r'v(\d+)\^(\d+)', repl, name)
+
+
+def mark_glyph(m, r, opts):
+    """SVG for one summand.
+
+    Filled square (with an infinity sign) = Z_(3); filled dot = Z/3; a dot
+    inside n-1 concentric rings = Z/3^n.  A dashed outer ring means the tower
+    runs past the end of the computed range, so the order shown is a lower
+    bound.
+    """
+    x, y = m['px'], m['py']
+    title = (f'<title>{esc(pretty(m["name"]))}  {esc(m["group"])}  '
+             f'(stem {m["stem"]}, s={m["s"]})</title>')
+    if m['kind'] == 'box':
+        side = 2 * r
+        body = (f'<rect x="{x - r:.1f}" y="{y - r:.1f}" width="{side:.1f}" '
+                f'height="{side:.1f}" fill="{C_DOT}" stroke="{C_EDGE}" '
+                f'stroke-width="0.6"/>'
+                f'<text x="{x:.1f}" y="{y - r - 1.0:.1f}" font-size="{2.2 * r:.1f}" '
+                f'text-anchor="middle" fill="{C_EDGE}">∞</text>')
+    elif m['kind'] == 'dot':
+        body = (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.2f}" fill="{C_DOT}" '
+                f'stroke="none"/>')
+    else:
+        solid, dashed = rings_of(m, opts)
+        body = (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.2f}" '
+                f'fill="{C_DOT}" stroke="none"/>')
+        for k in range(1, solid + dashed + 1):
+            dash = (' stroke-dasharray="1.6,1.3"'
+                    if dashed and k == solid + dashed else '')
+            body += (f'<circle cx="{x:.1f}" cy="{y:.1f}" '
+                     f'r="{r + opts.ring_gap * k:.2f}" fill="none" '
+                     f'stroke="{C_EDGE}" stroke-width="0.9"{dash}/>')
+        if m['n'] - 1 > solid:           # too many rings to draw legibly
+            R = m['radius']
+            body += (f'<text x="{x + R + 1:.1f}" y="{y - R:.1f}" font-size="5" '
+                     f'text-anchor="start" fill="{C_EDGE}">{m["n"]}</text>')
+    return f'<g>{title}{body}</g>'
+
+
+def rings_of(m, opts):
+    """(solid rings, dashed rings) around the central dot of a Z/3^n mark."""
+    solid = min(m['n'] - 1, opts.max_rings - 1)
+    return solid, (1 if m['truncated'] else 0)
+
+
+def mark_radius(m, r, opts):
+    """Outer radius of a mark, for label placement and line endpoints."""
+    if m['kind'] != 'circles':
+        return r
+    solid, dashed = rings_of(m, opts)
+    return r + opts.ring_gap * (solid + dashed)
+
+
+def render(marks, diffs, struct, towers, opts):
     U = opts.unit
-    pad_l, pad_b, pad_t, pad_r = 52, 42, 34, 24
+    pad_l, pad_b, pad_t, pad_r = 52, 46, 34, 30
     ykey = opts.ykey
 
-    xs = [c['stem'] for c in classes.values()] or [0]
-    ys = [c[ykey] for c in classes.values()] or [0]
+    xs = [m['stem'] for m in marks] or [0]
+    ys = [m[ykey] for m in marks] or [0]
     x0, x1 = min(min(xs), 0), max(xs)
     y0, y1 = min(min(ys), 0), max(ys)
     W = (x1 - x0 + 1) * U + pad_l + pad_r
@@ -161,17 +354,22 @@ def render(classes, diffs, struct, towers, opts):
     def Y(f):
         return H - pad_b - (f - y0 + 0.5) * U
 
-    # Several classes can share a bidegree: spread them within the cell.
+    base_r = opts.dot_radius or max(2.2, 0.075 * U)
+    for m in marks:
+        m['radius'] = mark_radius(m, base_r, opts)
+
+    # Several summands can share a bidegree: spread them within the cell.
     cells = defaultdict(list)
-    for c in classes.values():
-        cells[(c['stem'], c[ykey])].append(c)
+    for m in marks:
+        cells[(m['stem'], m[ykey])].append(m)
     for group in cells.values():
-        group.sort(key=lambda c: (c['s'], c['gen'], c['name']))
+        group.sort(key=lambda m: (m['s'], m['algnov'], m['name']))
         n = len(group)
-        step = min(0.30 * U, (0.62 * U) / n)
-        for i, c in enumerate(group):
-            c['px'] = X(c['stem']) + (i - (n - 1) / 2) * step
-            c['py'] = Y(c[ykey])
+        step = min(0.34 * U, (0.72 * U) / n)
+        for i, m in enumerate(group):
+            m['px'] = X(m['stem']) + (i - (n - 1) / 2) * step
+            m['py'] = Y(m[ykey])
+            m['slot'] = i
 
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" '
          f'height="{H:.0f}" viewBox="0 0 {W:.0f} {H:.0f}" '
@@ -207,9 +405,11 @@ def render(classes, diffs, struct, towers, opts):
     o.append(f'<line x1="{pad_l:.1f}" y1="{pad_t:.1f}" x2="{pad_l:.1f}" '
              f'y2="{H - pad_b:.1f}" stroke="{C_AXIS}" stroke-width="1"/>')
 
+    by_name = {m['name']: m for m in marks}
+
     def line(a, b, **kw):
-        A, B = classes.get(a), classes.get(b)
-        if not A or not B or 'px' not in A or 'px' not in B:
+        A, B = by_name.get(a), by_name.get(b)
+        if not A or not B or 'px' not in A or 'px' not in B or A is B:
             return None
         attrs = ' '.join(f'{k.replace("_", "-")}="{v}"' for k, v in kw.items())
         return (f'<line x1="{A["px"]:.1f}" y1="{A["py"]:.1f}" '
@@ -228,21 +428,57 @@ def render(classes, diffs, struct, towers, opts):
         if ln:
             o.append(ln)
 
-    r = opts.dot_radius or max(1.8, 0.075 * U)
-    for c in sorted(classes.values(), key=lambda c: (c['stem'], c[ykey])):
-        fill = C_DOT_TOWER if c.get('is_tower') else C_DOT
-        o.append(f'<circle cx="{c["px"]:.1f}" cy="{c["py"]:.1f}" r="{r:.2f}" '
-                 f'fill="{fill}" stroke="#3f8f8b" stroke-width="0.5">'
-                 f'<title>{esc(c["name"])}  (stem {c["stem"]}, s={c["s"]}, '
-                 f'algNov {c["algnov"]})</title></circle>')
+    for m in sorted(marks, key=lambda m: (m['stem'], m[ykey])):
+        o.append(mark_glyph(m, base_r, opts))
+
+    if opts.labels:
+        o.append(f'<g font-size="{opts.label_size}" fill="{C_LABEL}" '
+                 f'font-family="monospace">')
+        for m in marks:
+            dy = m['radius'] + opts.label_size + 1 + (m['slot'] % 2) * \
+                (opts.label_size + 0.5)
+            text = m['name'] if opts.raw_labels else pretty(m['name'])
+            o.append(f'<text x="{m["px"]:.1f}" y="{m["py"] + dy:.1f}" '
+                     f'text-anchor="middle">{esc(text)}</text>')
+        o.append('</g>')
 
     if opts.title:
         o.append(f'<text x="{pad_l:.1f}" y="{pad_t - 12:.1f}" font-size="14" '
                  f'fill="#222">{esc(opts.title)}</text>')
+    if opts.legend and ykey == 's':
+        o.append(legend_svg(pad_l, H - 9))
     o.append(f'<text x="{W - pad_r:.1f}" y="{H - 8:.1f}" font-size="10" '
              f'text-anchor="end" fill="{C_TEXT}">stem  t-s</text>')
     o.append('</svg>')
     return '\n'.join(o)
+
+
+def legend_svg(x, y, r=2.6, gap=2.2):
+    """One line explaining the glyphs, drawn under the x-axis."""
+    parts, cx = [], x + r
+    def label(text, cx, pad=0.0):
+        parts.append(f'<text x="{cx + r + 3 + pad:.1f}" y="{y + 3:.1f}" '
+                     f'font-size="8" fill="{C_TEXT}">{text}</text>')
+        return cx + r + 3 + pad + 5.2 * len(text) + 16
+    parts.append(f'<rect x="{cx - r:.1f}" y="{y - r:.1f}" width="{2*r:.1f}" '
+                 f'height="{2*r:.1f}" fill="{C_DOT}" stroke="{C_EDGE}" '
+                 f'stroke-width="0.6"/>')
+    cx = label('ℤ_(3)', cx) + r
+    parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r:.1f}" '
+                 f'fill="{C_DOT}" stroke="none"/>')
+    cx = label('ℤ/3', cx) + r + gap
+    parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r:.1f}" '
+                 f'fill="{C_DOT}" stroke="none"/>')
+    parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r + gap:.1f}" '
+                 f'fill="none" stroke="{C_EDGE}" stroke-width="0.9"/>')
+    cx = label('ℤ/3ⁿ  (n-1 rings)', cx, pad=gap) + r + gap
+    parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r:.1f}" '
+                 f'fill="{C_DOT}" stroke="none"/>')
+    parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r + gap:.1f}" '
+                 f'fill="none" stroke="{C_EDGE}" stroke-width="0.9" '
+                 f'stroke-dasharray="1.6,1.3"/>')
+    label('order cut off by the range (lower bound)', cx, pad=gap)
+    return '<g>' + ''.join(parts) + '</g>'
 
 
 # ------------------------------------------------------------------ main
@@ -259,8 +495,23 @@ def main():
                          "instead of <halfT>_BP.... Default: plain mr_BP output.")
     ap.add_argument('-o', '--output', help='default <halfT>_anss_E2.svg')
     ap.add_argument('--grading', choices=['anss', 'algnov'], default='anss',
-                    help='anss (default): (t-s, s), one dot per generator. '
-                         'algnov: mr_BP\'s printed (t-s, s+i) with 3-towers.')
+                    help='anss (default): (t-s, s), one mark per cyclic '
+                         'summand. algnov: mr_BP\'s printed (t-s, s+i), one '
+                         'dot per class, with 3-towers and differentials.')
+    ap.add_argument('--no-labels', dest='labels', action='store_false',
+                    help='omit the class names next to the marks')
+    ap.add_argument('--no-legend', dest='legend', action='store_false',
+                    help='omit the box/dot/circles key under the axis')
+    ap.add_argument('--label-size', type=float, default=5.5,
+                    help='font size for the class names (default 5.5)')
+    ap.add_argument('--raw-labels', action='store_true',
+                    help='label with the table text verbatim (v1^3[1-0]) '
+                         'instead of typesetting it as v_1^3[1-0]')
+    ap.add_argument('--max-rings', type=int, default=4,
+                    help='draw at most this many rings; beyond that the '
+                         'order is written beside the mark (default 4)')
+    ap.add_argument('--ring-gap', type=float, default=2.0,
+                    help='px between concentric rings (default 2.0)')
     ap.add_argument('--omit-stem0', action='store_true',
                     help='drop stem 0 (Ext^0 = Z_(3)), as the published '
                          'charts do')
@@ -288,35 +539,46 @@ def main():
                  f'./mr_BP {a.halfT} <s> first, or pass --dir.')
 
     classes, diffs = parse_table(table)
-    a0 = parse_mult(base + 'AANSS_a0.txt')
     h0 = parse_mult(base + 'AANSS_h0.txt')
 
     if a.grading == 'anss':
         a.ykey = 's'
-        classes = e2_page(classes, a0)
+        a0 = parse_mult_detail(base + 'AANSS_a0.txt')
+        if a0 is None:
+            sys.stderr.write(f'note: {base}AANSS_a0.txt not found; every '
+                             f'class drawn as its own Z/3\n')
+        marks, owner = build_marks(classes, a0)
         diffs, towers = [], []
-        struct = [(x, y) for x, y in h0 if x in classes and y in classes]
+        # h0-multiplication between summands: redirect each class to its mark
+        struct, seen = [], set()
+        for x, y in h0:
+            if x in owner and y in owner and owner[x] != owner[y]:
+                e = (marks[owner[x]]['name'], marks[owner[y]]['name'])
+                if e not in seen:
+                    seen.add(e)
+                    struct.append(e)
     else:
         a.ykey = 'algnov'
-        towers = [(x, y) for x, y in a0 if x in classes and y in classes]
-        struct = [(x, y) for x, y in h0 if x in classes and y in classes]
-        for _, t in towers:
-            if t in classes:
-                classes[t]['is_tower'] = True
+        a0 = parse_mult(base + 'AANSS_a0.txt')
+        marks = [dict(m, kind='dot', n=1, group='', members=[m['name']])
+                 for m in classes.values()]
+        names = {m['name'] for m in marks}
+        towers = [(x, y) for x, y in a0 if x in names and y in names]
+        struct = [(x, y) for x, y in h0 if x in names and y in names]
 
     if a.omit_stem0:
-        classes = {n: c for n, c in classes.items() if c['stem'] != 0}
+        marks = [m for m in marks if m['stem'] != 0]
     if a.max_stem is not None:
-        classes = {n: c for n, c in classes.items() if c['stem'] <= a.max_stem}
+        marks = [m for m in marks if m['stem'] <= a.max_stem]
     if a.max_filt is not None:
-        classes = {n: c for n, c in classes.items() if c[a.ykey] <= a.max_filt}
-    keep = set(classes)
+        marks = [m for m in marks if m[a.ykey] <= a.max_filt]
+    keep = {m['name'] for m in marks}
     struct = [e for e in struct if e[0] in keep and e[1] in keep]
     towers = [e for e in towers if e[0] in keep and e[1] in keep]
     diffs = [d for d in diffs if d[0] in keep and d[1] in keep]
 
-    if not classes:
-        sys.exit('error: no classes to draw (is the run empty, or the crop too tight?)')
+    if not marks:
+        sys.exit('error: nothing to draw (is the run empty, or the crop too tight?)')
 
     if a.no_title:
         a.title = None
@@ -325,17 +587,29 @@ def main():
                    else 'algebraic Novikov table, p=3')
         subject = f' of {a.comodule}' if a.comodule else ''
         a.title = (f'{grading}{subject}   '
-                   f'(halfT={a.halfT}, {len(classes)} classes)')
+                   f'(halfT={a.halfT}, {len(marks)} '
+                   f'{"summands" if a.grading == "anss" else "classes"})')
 
-    svg = render(classes, diffs, struct, towers, a)
+    svg = render(marks, diffs, struct, towers, a)
     out = a.output or os.path.join(a.dir, f'{a.halfT}_{a.comodule}anss_E2.svg')
     with open(out, 'w') as fh:
         fh.write(svg)
 
-    stems = [c['stem'] for c in classes.values()]
-    print(f'{len(classes)} classes (stems {min(stems)}-{max(stems)}), '
-          f'{len(struct)} alpha_1 lines, {len(towers)} 3-tower lines, '
-          f'{len(diffs)} differentials -> {out}')
+    stems = [m['stem'] for m in marks]
+    if a.grading == 'anss':
+        kinds = defaultdict(int)
+        for m in marks:
+            kinds[m['kind']] += 1
+        trunc = sum(1 for m in marks if m['truncated'])
+        print(f'{len(marks)} summands (stems {min(stems)}-{max(stems)}): '
+              f'{kinds["box"]} Z_(3) (box), {kinds["dot"]} Z/3 (dot), '
+              f'{kinds["circles"]} Z/3^n (rings), of which {trunc} have the '
+              f'top of the tower cut off by the range (dashed); '
+              f'{len(struct)} alpha_1 lines -> {out}')
+    else:
+        print(f'{len(marks)} classes (stems {min(stems)}-{max(stems)}), '
+              f'{len(struct)} alpha_1 lines, {len(towers)} 3-tower lines, '
+              f'{len(diffs)} differentials -> {out}')
     print('note: classes near the top stems are cut off by the degree bound, '
           'not absent.')
 
