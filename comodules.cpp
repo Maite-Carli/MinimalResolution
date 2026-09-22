@@ -158,6 +158,122 @@ static void build_triv_01(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
 	};
 }
 
+//---------------------------------------------------------------------
+//S/p: the mod p Moore spectrum, at height 1
+//---------------------------------------------------------------------
+//BP_*(S/p) = BP_*/p. The cofibre sequence S^0 --p--> S^0 -> S/p induces
+//
+//    0 --> BP_*/p --> BP_*(S/p) --> ker(p on BP_*) = 0 --> 0,
+//
+//since BP_* is torsion free, so BP_*(S/p) = BP_*/p on the nose: rank 1 on
+//the bottom cell, in degree 0, with NO top-cell generator -- the top cell
+//contributes nothing because multiplication by p is injective on BP_*.
+//
+//This is exactly the comodule that motivates the height mechanism. BP_*/p is
+//not free over BP_*, so it cannot be entered at height 0 at all; it is free
+//of rank 1 over BP_*/I_1 = BP_*/p = F_3[v_1, v_2, ...], hence height 1.
+//
+//The coaction is trivial: the generator is the unit of BP_*/p, and the unit
+//of the base ring is always primitive. All of the content sits in the
+//algebroid -- eta_R is not the identity on BP_*/p -- and that is carried by
+//the reduced structure tables, not by this matrix. In other words this
+//stands to BP_*BP/I_1 exactly as "sphere" stands to BP_*BP.
+//
+//WHAT TO CHECK: Ext^{0,*}(BP_*, BP_*/p) is the ring of invariants of
+//BP_*/p, which is F_3[v_1]. So the E2 page must have exactly one class in
+//filtration 0 in each stem 0, 4, 8, 12, ... (|v_1| = 4) and nothing else
+//there -- a sharp prediction that fails loudly if the freeness bookkeeping
+//is wrong. See docs/GENERAL_COMODULES.md for the sharper LES check against
+//the sphere's own run.
+static void build_mod_p(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
+                         std::function<vectors<matrix_index,BPBP>(int)> &coaction_rows){
+	rank = 1;
+	degree = {0};
+
+	coaction_rows = [&BP_oper](int i) -> vectors<matrix_index,BPBP>{
+		vectors<matrix_index,BPBP> row;
+		row.push({(matrix_index)i, BP_oper.BPBP_opers.unit(1)});
+		return row;
+	};
+}
+
+//---------------------------------------------------------------------
+//S/(p,v_1) = V(1): the Smith-Toda complex, at height 2
+//---------------------------------------------------------------------
+//V(1) = cofib(v_1 : Sigma^4 S/p --> S/p) at p = 3, where v_1 is the Adams
+//self map (|v_1| = 2(p-1) = 4). Multiplication by v_1 is injective on
+//BP_*(S/p) = BP_*/p, so as for S/p above the cofibre sequence leaves
+//
+//    BP_*(V(1)) = BP_*/(p, v_1) = BP_*/I_2,
+//
+//rank 1 in degree 0, free over BP_*/I_2 = F_3[v_2, v_3, ...] and over
+//nothing smaller: height 2. Coaction trivial, for the same reason as for
+//S/p -- it is the base ring of its own Hopf algebroid.
+//
+//WHAT TO CHECK: Ext^{0,*}(BP_*, BP_*/I_2) = F_3[v_2], so filtration 0 must
+//be exactly one class in each stem 0, 16, 32, ... (|v_2| = 2(3^2-1) = 16).
+//
+//NOTE V(1) exists as a spectrum at p >= 3, which is why this entry is
+//meaningful in this p=3 fork; at p=2 there is no such complex, though the
+//comodule BP_*/(2,v_1) exists regardless and is what this actually resolves.
+static void build_mod_p_v1(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
+                            std::function<vectors<matrix_index,BPBP>(int)> &coaction_rows){
+	rank = 1;
+	degree = {0};
+
+	coaction_rows = [&BP_oper](int i) -> vectors<matrix_index,BPBP>{
+		vectors<matrix_index,BPBP> row;
+		row.push({(matrix_index)i, BP_oper.BPBP_opers.unit(1)});
+		return row;
+	};
+}
+
+//---------------------------------------------------------------------
+//S/alpha_1 smash S/p, at height 1
+//---------------------------------------------------------------------
+//BP_*(S/alpha_1) is free over BP_* (see build_S_alpha1 above), so the
+//universal-coefficient sequence for smashing with the Moore spectrum has no
+//Tor term and
+//
+//    BP_*(S/alpha_1 ^ S/p) = BP_*(S/alpha_1)/p,
+//
+//free of rank 2 over BP_*/p on x_0 in degree 0 and x_4 in degree 4, with the
+//same coaction matrix as S/alpha_1 reduced mod p:
+//
+//    psi(x_0) = 1 (x) x_0
+//    psi(x_4) = 1 (x) x_4  +  t_1 (x) x_0
+//
+//WHY THIS ONE: it is the only shipped comodule that is simultaneously of
+//height > 0 AND of rank > 1 AND has a nonzero off-diagonal entry, so it is
+//the only one that exercises the height machinery and the general coaction
+//machinery at the same time. sphere/mod_p/mod_p_v1 all have the identity
+//coaction; alpha_1 and triv_01 are both height 0.
+static void build_alpha1_mod_p(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
+                                std::function<vectors<matrix_index,BPBP>(int)> &coaction_rows){
+	rank = 2;
+	degree = {0, 4};
+
+	//t_1, from BP_oper, which is already reduced mod I_1 at this point --
+	//see the WARNING at the top of this file about the exponent slots, and
+	//BP_Op::h0(), which knows that (eta_R(v_1)-eta_L(v_1))/p is not a thing
+	//one can compute in characteristic p and builds t_1 directly instead.
+	BPBP t1 = BP_oper.h0();
+
+	coaction_rows = [&BP_oper, t1](int i) -> vectors<matrix_index,BPBP>{
+		vectors<matrix_index,BPBP> row;
+		BPBP one = BP_oper.BPBP_opers.unit(1);
+		if(i == 0){
+			//psi(x_0) = 1 (x) x_0 -- the bottom cell is a sub-comodule
+			row.push({(matrix_index)0, one});
+		} else {
+			//psi(x_4) = t_1 (x) x_0 + 1 (x) x_4
+			row.push({(matrix_index)0, t1});
+			row.push({(matrix_index)1, one});
+		}
+		return row;
+	};
+}
+
 //=====================================================================
 //ADDING YOUR OWN COMODULE
 //
@@ -181,19 +297,35 @@ static void build_triv_01(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
 //   when your builder runs, so BP_oper.h0() (= t_1) and BP_oper.thetas()
 //   (= beta_1 etc.) are available.
 //
-//2. Add one row to the table below.
+//2. Add one row to the table below, whose last field is the HEIGHT n: your
+//   comodule's underlying module must be free over BP_*/I_n, where
+//   I_n = (p, v_1, ..., v_{n-1}). Use 0 if it is free over BP_* itself (the
+//   classical case), 1 if it is only free over BP_*/p, 2 if only over
+//   BP_*/(p,v_1), and so on. See ComoduleSpec::height in comodules.h for why
+//   a comodule that is not free over BP_* can still be resolved this way.
+//
+//   At height n>0 write the coaction in BP_*BP/I_n. In practice that means
+//   the same thing you would have written over BP_*BP: BP_oper is already
+//   reducing mod I_n when your builder runs, and set_comodule reduces again,
+//   so anything built from BP_oper is automatically in the right place.
 //
 //That is all -- mr_BP_comod picks the new name up automatically, including
 //in --list and in its usage message.
 //
-//NOTHING HERE CHECKS THE COMODULE AXIOMS. An incorrect coaction will not
-//crash; it will silently produce a wrong Ext computation. Verify
-//coassociativity and counitality by hand before trusting a run.
+//NOTHING HERE CHECKS THE COMODULE AXIOMS, AND NOTHING CHECKS THE HEIGHT.
+//An incorrect coaction will not crash; it will silently produce a wrong Ext
+//computation. Verify coassociativity and counitality by hand before trusting
+//a run. The height is silent in both directions too: too small and the
+//machinery treats a non-free module as free; too large and it computes
+//Ext(BP_*, M/I_n) rather than Ext(BP_*, M) -- see ComoduleSpec::height.
 //=====================================================================
 static const std::vector<ComoduleSpec> comodule_table = {
-	{"sphere",    "the sphere: the trivial comodule BP_* (rank 1, degree 0) -- what mr_BP resolves", build_sphere},
-	{"alpha_1",   "S/alpha_1 = cofib(S^3 -> S^0) (rank 2, degrees 0 and 4, off-diagonal t_1)",       build_S_alpha1},
-	{"triv_01",   "S v S^1: BP_* (+) Sigma BP_* (rank 2, degrees 0 and 1, identity coaction)",       build_triv_01},
+	{"sphere",        "the sphere: the trivial comodule BP_* (rank 1, degree 0) -- what mr_BP resolves", build_sphere,       0},
+	{"alpha_1",       "S/alpha_1 = cofib(S^3 -> S^0) (rank 2, degrees 0 and 4, off-diagonal t_1)",       build_S_alpha1,     0},
+	{"triv_01",       "S v S^1: BP_* (+) Sigma BP_* (rank 2, degrees 0 and 1, identity coaction)",       build_triv_01,      0},
+	{"mod_p",         "S/p: BP_*/p (rank 1, degree 0, trivial coaction) -- free over BP_*/p, not BP_*",  build_mod_p,        1},
+	{"mod_p_v1",      "S/(p,v_1) = V(1): BP_*/(p,v_1) (rank 1, degree 0, trivial coaction)",             build_mod_p_v1,     2},
+	{"alpha_1_mod_p", "S/alpha_1 ^ S/p: BP_*(S/alpha_1)/p (rank 2, degrees 0 and 4, off-diagonal t_1)",  build_alpha1_mod_p, 1},
 };
 
 const std::vector<ComoduleSpec>& all_comodules(){
@@ -216,9 +348,12 @@ string list_comodules(){
 
 	string result;
 	for(auto const &c : comodule_table){
-		result += "  " + c.name + string(width - c.name.size(), ' ') + "  " + c.description;
+		result += "  " + c.name + string(width - c.name.size(), ' ')
+		        + "  [n=" + std::to_string(c.height) + "]  " + c.description;
 		if(c.name == default_comodule_name()) result += "   [default]";
 		result += "\n";
 	}
+	result += "\n  n is the height: the underlying module is free over BP_*/I_n,\n"
+	          "  I_n = (p, v_1, ..., v_{n-1}); n=0 means free over BP_* itself.\n";
 	return result;
 }

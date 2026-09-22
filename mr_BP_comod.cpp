@@ -22,6 +22,13 @@
 //resolution back to BP_*BP. You describe your comodule once, in terms of
 //BP_*BP; reduce_coaction_rows_mod_I derives the P-side reduction.
 //
+//HEIGHTS: a comodule may be free over BP_*/I_n rather than over BP_* itself
+//-- BP_*(S/p) = BP_*/p is the basic example -- in which case the whole
+//computation is done over the quotient Hopf algebroid
+//(BP_*/I_n, BP_*BP/I_n), which computes the same Ext by change of rings.
+//The height n is recorded per comodule in comodules.cpp; everything else
+//about the run, including the phase-1 model, is unchanged.
+//
 //Output files are prefixed <halfT>_<comodule>BP... (final resolution,
 //algNov/Boc tables) and <halfT>_<comodule>P... (the mod-I model resolution),
 //so runs for different comodules -- and a plain mr_st/mr_BP run -- coexist
@@ -70,16 +77,33 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
-	std::cout << "comodule: " << spec->name << " -- " << spec->description << "\n" << std::flush;
+	std::cout << "comodule: " << spec->name << " -- " << spec->description << "\n"
+	          << "height: n = " << spec->height;
+	if(spec->height == 0)
+		std::cout << " (free over BP_*)\n";
+	else{
+		std::cout << " (free over BP_*/I_" << spec->height << ", I_" << spec->height << " = (p";
+		for(int i=1; i<spec->height; ++i) std::cout << ",v_" << i;
+		std::cout << "))\n";
+	}
+	std::cout << std::flush;
 
 	string filename0  = string(argv[1]) + "_";
 	string bp_dir     = filename0 + spec->name + "BP";   //final (BP-side) output prefix
 	string model_dir  = filename0 + spec->name + "P";    //mod-I model output prefix
 
-	//construct the BP-side driver first: this loads the structure maps a
+	//Construct the BP-side driver first: this loads the structure maps a
 	//BPtab run already produced, so the builder below can use BP_oper.h0()
-	//and friends to build BP_*BP elements
-	BPGenericInit BPoper(max_degree, resolution_length, filename0+"etaL", filename0+"R2L", filename0+"delta", bp_dir);
+	//and friends to build BP_*BP elements.
+	//
+	//The height goes in here, at the very start, because it decides two
+	//things that have to be settled before anything else happens: the base
+	//ring's arithmetic (F_p rather than Z_(p) when n>0), and the reduction
+	//applied to the structure tables as they stream in. From this point on
+	//BPoper.BP_oper IS the Hopf algebroid (BP_*/I_n, BP_*BP/I_n), so the
+	//builder below writes its coaction there without having to do anything
+	//differently.
+	BPGenericInit BPoper(max_degree, resolution_length, filename0+"etaL", filename0+"R2L", filename0+"delta", bp_dir, spec->height);
 
 	int rank;
 	std::vector<int> degree;
@@ -92,9 +116,14 @@ int main(int argc, char** argv){
 
 	BPoper.set_comodule(rank, degree, coaction_rows);
 
-	//phase 1: resolve the comodule's reduction mod I over the field-based
+	//Phase 1: resolve the comodule's reduction mod I over the field-based
 	//Hopf algebra P = BP_*BP/I. The model needs one more step than the
 	//BP-side length, mirroring the mr_st/mr_BP convention.
+	//
+	//This phase is the SAME at every height, which is the reason the whole
+	//scheme is cheap: (BP_*BP/I_n)/(I/I_n) = BP_*BP/I = P for every n, so
+	//the field-side model is over the same Hopf algebra whichever quotient
+	//we are resolving over, and reduce_coaction_rows_mod_I is the same map.
 	SteenrodGenericInit stOper(3, max_degree, resolution_length+1, model_dir+"steenrod_coaction.data");
 	stOper.set_comodule(rank, degree, reduce_coaction_rows_mod_I(coaction_rows));
 	stOper.resolve(model_dir);

@@ -7,8 +7,13 @@ that). This page documents a new, additive capability — `BP_generic_init.h`/
 `.cpp`, `Steenrod_generic_init.h`/`.cpp`, `BP_mod_I.h`/`.cpp`,
 `comodules.h`/`.cpp`, and `mr_BP_comod.cpp` — for computing the same kind of
 E2 page for **any** finitely generated `BP_*BP`-comodule `M` that is free
-over `BP_*` (e.g. the BP-homology of a finite complex), given as a rank, a
-per-generator degree, and a coaction matrix.
+over `BP_*/I_n` for some `n ≥ 0` (e.g. the BP-homology of a finite complex),
+given as a rank, a per-generator degree, a coaction matrix, and that `n`.
+Here `I_n = (p, v_1, …, v_{n-1})`, so `n = 0` means free over `BP_*` itself;
+`n ≥ 1` covers comodules like `BP_*(S/p) = BP_*/p` and
+`BP_*(S/(p,v_1)) = BP_*/I_2`, which are free over no smaller quotient. See
+[Comodules that are not free over `BP_*`](#comodules-that-are-not-free-over-bp_-heights)
+below.
 
 Comodules live in a **registry** (`comodules.cpp`) and are selected by name
 on the command line:
@@ -97,16 +102,99 @@ flowchart LR
     G --> H["BPInit::resolution() / make_algNov() / make_Boc()<br/>(unchanged -- only ever read the resolution's own output)"]
 ```
 
+## Comodules that are not free over `BP_*`: heights
+
+`BP_*(S/p) = BP_*/p` cannot be entered as a rank/degree/coaction triple at
+all: `comodule_generic` has a rank and a basis over the base ring, and
+`BP_*/p` has neither over `BP_*`. It *is* free of rank 1 over `BP_*/p`,
+though, and that turns out to be enough.
+
+The ideals `I_n = (p, v_1, …, v_{n-1})` are **invariant**, so
+`(BP_*/I_n, BP_*BP/I_n)` is again a Hopf algebroid, with
+
+```
+BP_*/I_n   = F_p[v_n, v_{n+1}, …]
+BP_*BP/I_n = (BP_*/I_n)[t_1, t_2, …]
+```
+
+and for a comodule `M` with `I_n M = 0` the cobar complexes agree term by term
+(`BP_*BP ⊗_{BP_*} M = (BP_*BP/I_n) ⊗_{BP_*/I_n} M`), giving the
+change-of-rings isomorphism
+
+```
+Ext_{BP_*BP}(BP_*, M)  ≅  Ext_{BP_*BP/I_n}(BP_*/I_n, M).
+```
+
+So the recipe is simply to run the whole computation over the quotient Hopf
+algebroid. Each comodule records which one as its **height** `n`
+(`ComoduleSpec::height` in `comodules.h`); `n = 0` is the classical case and
+is what every pre-existing comodule uses, bit for bit.
+
+### Why this costs almost nothing
+
+Because `(BP_*BP/I_n) / (I/I_n) = BP_*BP/I = P` for **every** `n`: the
+field-side model of phase 1 is over the same `P` whichever quotient you are
+resolving over. Phase 1, `reduce_coaction_rows_mod_I`, and the
+`pre_resolution_modeled` lift of phase 2 are all untouched. Only the ring the
+lift happens over changes:
+
+| | height 0 | height `n ≥ 1` |
+|---|---|---|
+| base ring | `BP_* = Z_(p)[v_1, v_2, …]` | `BP_*/I_n = F_p[v_n, v_{n+1}, …]` |
+| coefficients | `Z3_Op` (characteristic 0) | `Z3_mod_p_Op` (characteristic `p`) |
+| `v_1 … v_{n-1}` | present | killed |
+| primitive basis | all `v`-monomials | monomials in `v_n, v_{n+1}, …` only |
+| algNov filtration | `val_p(coefficient) + #v`'s | `#v`'s (`p` is `0`) |
+| Bockstein | `v_0 = p` | `v_n` |
+| `a_0` table | multiplication by `p` | multiplication by `v_n`, in `AANSS_a<n>.txt` |
+
+Two facts keep this small rather than a rewrite:
+
+* **Characteristic `p` is a property of the coefficient ring alone.** Every
+  ring operation on `BP` and `BPBP` runs through a `RingOp<Z3>*`, so
+  substituting `Z3_mod_p_Op` when `BPInit` is constructed turns `BP_*` into
+  `BP_*/p` everywhere above it. A second coefficient *type* would have been
+  the wrong move: `polynomial<Fp>` is already taken — it is `P` — and
+  `matrix<P>::moduleOper` is a static that both halves of `mr_BP_comod` share
+  inside one process.
+* **Killing `v_1, …, v_{n-1}` is reduction modulo a *monomial* ideal**, so the
+  reduced elements are closed under `+` and `×`. Reducing the three structure
+  tables as they are read (`BP_Op::load_etaL`/`load_R2L`/`load_delta`) and the
+  supplied coaction (`BPGenericInit::set_comodule`) is therefore enough to
+  keep every product the resolution engine forms reduced as well. No ring
+  operation needs overriding.
+
+The structure tables do **not** need regenerating: `η_R(I_n) ⊆ I_n·BP_*BP`
+because `I_n` is invariant, so what `BPtab` already wrote reduces entrywise.
+One `BPtab <t>` run serves every height.
+
+### What you have to get right
+
+- **`h_0`.** `BP_Op::h0()` computes `(η_R(v_1) − η_L(v_1))/p`, which is `0/p`
+  in characteristic `p`: the two units agree mod `p`, so the difference
+  vanishes before the division happens, and dividing by `p` is not an
+  operation `BP_*/I_n` has. It detects this and builds `t_1` directly instead
+  (`BP_Op::t1()`, bitwise equal to `h0()` at height 0).
+- **The height itself.** Nothing checks it, in *either* direction. Too small
+  and the machinery treats a module that is not free over `BP_*/I_n` as
+  though it were, and the answer is nonsense. Too large and you get a
+  perfectly self-consistent run of the wrong computation: `Ext(BP_*, M/I_n)`
+  rather than `Ext(BP_*, M)` — declaring the `sphere` at `n = 1` quietly
+  computes the E2 page of `S/p`. State `n` from a proof that the module is
+  free over `BP_*/I_n` and over nothing larger.
+
 ## How to use it
 
 Build once, then pick a comodule by name:
 
 ```
 sh BP_comod_compile
-./BPtab 20                      # same prerequisite as mr_BP
+./BPtab 20                      # same prerequisite as mr_BP; one run serves every height
 ./mr_BP_comod 20 4              # the sphere (default)
 ./mr_BP_comod 20 4 alpha_1      # S/alpha_1
-./mr_BP_comod --list            # what's available
+./mr_BP_comod 20 4 mod_p        # S/p, free over BP_*/p rather than over BP_*
+./mr_BP_comod 20 4 mod_p_v1     # S/(p,v_1) = V(1)
+./mr_BP_comod --list            # what's available, with each comodule's height
 ```
 
 Output is prefixed `<halfT>_<comodule>BP...` for the final resolution and its
@@ -116,11 +204,22 @@ coexist in one directory without clobbering each other.
 
 ### Shipped comodules
 
-| name | complex | rank | degrees | coaction |
-|---|---|---|---|---|
-| `sphere` (default) | `S` | 1 | `0` | `ψ(x_0) = 1 ⊗ x_0` |
-| `alpha_1` | `S/α₁ = cofib(S³ → S⁰)` | 2 | `0, 4` | `ψ(x_0) = 1 ⊗ x_0`, `ψ(x_4) = 1 ⊗ x_4 + t_1 ⊗ x_0` |
-| `triv_01` | `S ∨ S¹` | 2 | `0, 1` | identity: `ψ(x_i) = 1 ⊗ x_i` |
+| name | complex | `n` | rank | degrees | coaction |
+|---|---|---|---|---|---|
+| `sphere` (default) | `S` | 0 | 1 | `0` | `ψ(x_0) = 1 ⊗ x_0` |
+| `alpha_1` | `S/α₁ = cofib(S³ → S⁰)` | 0 | 2 | `0, 4` | `ψ(x_0) = 1 ⊗ x_0`, `ψ(x_4) = 1 ⊗ x_4 + t_1 ⊗ x_0` |
+| `triv_01` | `S ∨ S¹` | 0 | 2 | `0, 1` | identity: `ψ(x_i) = 1 ⊗ x_i` |
+| `mod_p` | `S/p` | 1 | 1 | `0` | `ψ(x_0) = 1 ⊗ x_0` |
+| `mod_p_v1` | `S/(p,v_1) = V(1)` | 2 | 1 | `0` | `ψ(x_0) = 1 ⊗ x_0` |
+| `alpha_1_mod_p` | `S/α₁ ∧ S/p` | 1 | 2 | `0, 4` | as `alpha_1` |
+
+`mod_p` and `mod_p_v1` have the *trivial* coaction for the same reason the
+sphere does: each is the base ring of its own Hopf algebroid, and the unit is
+always primitive. All the content sits in `η_R`, which lives in the reduced
+structure tables, not in the coaction matrix. `alpha_1_mod_p` is the one
+shipped comodule that is simultaneously of height > 0, rank > 1, and has a
+nonzero off-diagonal entry, so it is the only one exercising the height
+machinery and the general-coaction machinery at once.
 
 `triv_01` is split (`BP_*(S ∨ S¹) = BP_* ⊕ ΣBP_*`), which makes it a useful
 self-test of the rank > 1 machinery: since `Ext` takes direct sums to direct
@@ -133,7 +232,13 @@ below. It also exercises odd-degree bookkeeping, which neither the sphere nor
 
 Two steps, both in `comodules.cpp`, and nothing else in the program changes:
 
-1. Write a builder function setting `rank`, `degree`, and `coaction_rows`.
+1. Write a builder function setting `rank`, `degree`, and `coaction_rows`,
+   and give its table row a **height** (the last field). Use `0` if the
+   underlying module is free over `BP_*`, `1` if only over `BP_*/p`, `2` if
+   only over `BP_*/(p,v_1)`, and so on. At height `n > 0` write the coaction
+   in `BP_*BP/I_n` — in practice that means writing exactly what you would
+   have written over `BP_*BP`, since `BP_oper` is already reducing mod `I_n`
+   by the time your builder runs and `set_comodule` reduces again.
    `coaction_rows(i)` returns generator `i`'s coaction as a sparse
    `vectors<matrix_index,BPBP>` — a list of `(j, c)` pairs, `j` the index of
    another generator (`0..rank-1`), `c` a `BP_*BP` element built with
@@ -254,6 +359,51 @@ Find the analogous prediction for your own complex before trusting its
 output; it is the only check that can catch a wrong coaction matrix, since
 nothing verifies the comodule axioms.
 
+### Checks for a height > 0 run
+
+Three predictions, of increasing strength, and what they currently give.
+
+**1. `Ext^0` is the ring of invariants of the base ring.** For `BP_*/I_n`
+that is `F_p[v_n]`, so filtration 0 must be exactly one class in each of the
+stems `0, |v_n|, 2|v_n|, …` and nothing else. At `t = 30`, `length = 8`:
+
+```
+mod_p     Ext^0 = 1, v1, v1^2, …, v1^7   at stems 0, 4, 8, …, 28   (|v_1| = 4)
+mod_p_v1  Ext^0 = 1, v2                  at stems 0, 16            (|v_2| = 16)
+```
+
+both exactly as predicted, and `grep -c "v1\^" 30_mod_p_v1BPAANSS_*.txt`
+returns `0` — `v_1` really is gone at height 2. This is the check that fails
+loudly if the freeness bookkeeping (the primitive basis, the table
+reduction) is wrong. Compare the sphere, where `Ext^0` is instead the
+`v_0`-tower `1, v0, v0^2, …` in stem 0 alone: that contrast is the whole
+difference between `Z_(p)` and `F_p` showing up in the output.
+
+**2. `α₁` behaves.** `mod_p` has a class at `deg=(3,1)` (that is `α₁`);
+`alpha_1_mod_p`, which cones it off, has none — the same one-line check as
+for `alpha_1` above, one height up.
+
+**3. The cofiber long exact sequence, bidegree by bidegree.** `ses_check.py`
+takes the base run's prefix with `-s`, so it will compare a height-`n`
+two-cell complex against the height-`n` *one-cell* run rather than against
+the sphere:
+
+```
+./BPtab 30
+./mr_BP_comod 30 8 mod_p
+./mr_BP_comod 30 8 alpha_1_mod_p
+./ses_check.py 30 -c alpha_1_mod_p -s 30_mod_pBP
+```
+
+`0 → BP_*/p → BP_*(S/α₁ ∧ S/p) → Σ⁴BP_*/p → 0` has connecting map `α₁`, so
+this is the same shape of comparison the script was written for, with
+`BP_*/p` in place of `BP_*`. It currently reports **26 bidegrees in
+agreement, 23 of them with the prediction pinned down exactly, 0
+mismatches** — which checks the height machinery and the rank > 1 coaction
+machinery simultaneously, against an independent computation. (The script
+prints "vs sphere" in its header regardless; the `-s` prefix is what it
+actually read.)
+
 ## Caveats
 
 - **No comodule-axiom verification.** Nothing here checks that the coaction
@@ -265,6 +415,15 @@ nothing verifies the comodule axioms.
   pipeline** — bounded by `max_degree`/`monomial_index`, and by the shared
   `exponents.h` table's generator cap (`v_1..v_5`/`t_1..t_5`), exactly as for
   the sphere computation.
-- **"Free over `BP_*`" is assumed, not checked.** This matches the
-  framework's blanket assumption throughout (`comodule_generic` has no
-  notion of torsion), per `MinimalResolution.pdf` Definition 1.
+- **"Free over `BP_*/I_n`" is assumed, not checked**, and neither is `n`
+  itself. This matches the framework's blanket assumption throughout
+  (`comodule_generic` has no notion of torsion), per `MinimalResolution.pdf`
+  Definition 1. See "What you have to get right" above for what each kind of
+  mistake looks like.
+- **Only the invariant *prime* ideals `I_n` are available.** `S/p^k` and
+  `S/(p, v_1^k)` for `k > 1` have `BP`-homology that is a module over an
+  invariant quotient too — `(p^k)` and `(p, v_1^k)` are invariant ideals —
+  but those quotients are not polynomial rings, so they would need a
+  truncated multiplication rather than just a reduction, closer to what
+  `trunc_hopf.cpp` does. The height is an integer `n` today, not a general
+  invariant ideal.

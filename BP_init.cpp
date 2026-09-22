@@ -6,20 +6,35 @@ BPComodInit::BPComodInit(string filename) : BPCoMod_generic(&coaction_matrix), c
 }
 
 //the constructor
-BPInit::BPInit(int max_deg, int res_length, string etaL_data, string delta_data, string R2L_data, string dirname) : BP_oper(max_deg, &Z3_oper, &etaL_matrix, &delta_matrix, &R2L_matrix), F3Mod_opers(&Z3_oper.F3_opers), etaL_matrix(dirname + "etaL_matrix"), R2L_matrix(dirname + "R2L_matrix"), delta_matrix(dirname + "delta_matrix"), indj(dirname + "indj"), qut(dirname + "qut"), new_map(dirname + "new_map"), mm(dirname + "mm_matrix"), comod(dirname + "comodule_matrix"), multp(&BP_oper){
+//
+//Note the base ring's arithmetic is chosen here, before anything else is
+//built: at height 0 it is Z_(p) as always, above it F_p, because
+//BP_*/I_n = F_p[v_n, v_{n+1}, ...] has characteristic p. Everything that
+//consumes the base ring does so through a RingOp<Z3>*, so this one choice
+//propagates through BP, BPBP, and every module and matrix over them.
+BPInit::BPInit(int max_deg, int res_length, string etaL_data, string delta_data, string R2L_data, string dirname, int hgt) : Z3_oper_store(hgt > 0 ? (Z3_Op*)new Z3_mod_p_Op() : new Z3_Op()), Z3_oper(*Z3_oper_store), BP_oper(max_deg, &Z3_oper, &etaL_matrix, &delta_matrix, &R2L_matrix), F3Mod_opers(&Z3_oper.F3_opers), etaL_matrix(dirname + "etaL_matrix"), R2L_matrix(dirname + "R2L_matrix"), delta_matrix(dirname + "delta_matrix"), indj(dirname + "indj"), qut(dirname + "qut"), new_map(dirname + "new_map"), mm(dirname + "mm_matrix"), comod(dirname + "comodule_matrix"), multp(&BP_oper){
 	max_degree = max_deg;
 	resolution_length = res_length;
 	director = dirname;
+	height = hgt;
 	
 	//initialize matric operators
 	matrix<BP>::moduleOper = &BP_oper.BPMod_opers;
 	matrix<BPBP>::moduleOper = &BP_oper.BPBPMod_opers;
 	matrix<Z3>::moduleOper = &BP_oper.Z3Mod_opers;
 
+	//The height has to be set BEFORE the structure tables are read: they are
+	//reduced mod I_n as they stream in (matrix_file's update_all is
+	//unimplemented, so there is no reducing them after the fact).
+	BP_oper.set_height(height);
+	
 	//initialize the structure data
 	BP_oper.initialize(etaL_data, delta_data, R2L_data);
 	
-	//initialize the comod to a trivial one with one generator at degree 0
+	//initialize the comod to a trivial one with one generator at degree 0.
+	//At height n this is BP_*/I_n as a comodule over BP_*BP/I_n -- i.e.
+	//already the right thing for S/p, S/(p,v_1), ... -- exactly as it is
+	//BP_* itself (the sphere) at height 0.
 	BP_oper.set_to_trivial(comod,0);
 	
 	//initialize the curtis tables
@@ -103,9 +118,19 @@ void BPInit::make_algNov(){
 	std::fstream atb(director + "AANSS_table.txt", std::ios::out);
 	atb << AANtables.output_tables();
 	
-	auto et2 = multp.three_extension(resolution_length,Complex,AANtables,resolution_length);
-	std::fstream a0f(director + "AANSS_a0.txt", std::ios::out);
-	a0f << multp.output_multiplication_table(et2,0,resolution_length-1);
+	//Multiplication by the bottom generator of the base ring's maximal
+	//invariant ideal: p = v_0 over BP_*, v_n over BP_*/I_n (where p is 0, so
+	//the v_0 table would be uniformly zero and tell you nothing).
+	if(height > 0){
+		auto et2 = multp.vn_extension(resolution_length,Complex,AANtables,height,resolution_length);
+		std::fstream anf(director + "AANSS_a" + std::to_string(height) + ".txt", std::ios::out);
+		anf << multp.output_multiplication_table(et2,0,resolution_length-1);
+	}
+	else{
+		auto et2 = multp.three_extension(resolution_length,Complex,AANtables,resolution_length);
+		std::fstream a0f(director + "AANSS_a0.txt", std::ios::out);
+		a0f << multp.output_multiplication_table(et2,0,resolution_length-1);
+	}
 }
 
 //make Bockstein table
@@ -121,9 +146,17 @@ void BPInit::make_Boc(){
 	std::fstream b2a(director + "B2A_table.txt", std::ios::out);
 	b2a << multp.output_multiplication_table(ba,0,resolution_length-1);
 	
-	auto et2 = multp.three_extension(resolution_length,Complex,Btables,resolution_length);
-	std::fstream a0f(director + "BocSS_a0.txt", std::ios::out);
-	a0f << multp.output_multiplication_table1(et2,0,resolution_length-1);
+	//as in make_algNov: p over BP_*, v_n over BP_*/I_n
+	if(height > 0){
+		auto et2 = multp.vn_extension(resolution_length,Complex,Btables,height,resolution_length);
+		std::fstream anf(director + "BocSS_a" + std::to_string(height) + ".txt", std::ios::out);
+		anf << multp.output_multiplication_table1(et2,0,resolution_length-1);
+	}
+	else{
+		auto et2 = multp.three_extension(resolution_length,Complex,Btables,resolution_length);
+		std::fstream a0f(director + "BocSS_a0.txt", std::ios::out);
+		a0f << multp.output_multiplication_table1(et2,0,resolution_length-1);
+	}
 }
 
 //make the algebraic Novikov multiplication table by a given element in BPBP
