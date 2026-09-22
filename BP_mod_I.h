@@ -7,16 +7,36 @@
 //its class in BP_*/(p, v_1, v_2, ...) = F_3, i.e. its constant term (v_i-
 //exponent 0), reduced mod 3. Every term with a nonzero v_i-exponent maps to
 //0, since it lies in the ideal I = (p, v_1, v_2, ...).
+//
+//NOTE this is for genuine BP_* elements only. It is deliberately NOT used by
+//reduce_BPBP_mod_I below: the BP sitting in BPBP's coefficient slot is a
+//polynomial in the t_i, not the v_i, so "kill every term with a nonzero
+//exponent" is the wrong operation there.
 Fp reduce_BP_mod_I(BP const &x);
 
-//Reduce an element of BPBP (= BP_*BP, a polynomial in t_1,t_2,... with BP
-//coefficients) to its class in P = BP_*BP/I (the same polynomial in t_i,
-//each BP coefficient reduced mod I via reduce_BP_mod_I above). This relies
-//on BPBP and P sharing the same monomial (t_i) encoding -- true here because
-//both are built from the same shared exponents.h/exponents.cpp table (see
-//docs/pipelines/STEENROD.md sec 1 and docs/ARCHITECTURE.md sec 1 for why
-//BP_*BP/I's t_i and the classical pipeline's generators share a grading and
-//encoding by construction, not coincidence).
+//Reduce an element of BPBP = BP_*BP to its class in P = BP_*BP/I.
+//
+//MIND THE SLOTS. BPBP = polynomial<BP> is NOT "a polynomial in t_1,t_2,...
+//with BP_* coefficients" in the layout the type name suggests: the OUTER
+//exponent indexes the v_i and the INNER (coefficient) BP's exponent indexes
+//the t_i -- see the warning at the top of comodules.cpp, and BP.cpp:69. So
+//the reduction keeps only the terms whose OUTER exponent is 0 (any v makes
+//the term lie in I, whichever unit put it there: eta_L(v_n) is in I by
+//definition and eta_R(v_n) is in I*BPBP because I is invariant), and reduces
+//the remaining inner t-polynomial's Z_3 coefficients mod p.
+//
+//Two values pin the convention down, and are worth re-checking after any
+//change here: t_1 (= BP_Op::h0()) must reduce to t_1, and eta_R(v_1)
+//(= BPBP_opers.monomial(singleVar(1,1), unit(1))) must reduce to 0. Getting
+//these backwards is silent -- it reduces every off-diagonal coaction entry
+//to 0, i.e. it hands the second phase a SPLIT comodule.
+//
+//The result relies on BPBP and P sharing the same monomial (t_i) encoding --
+//true here because both are built from the same shared exponents.h/
+//exponents.cpp table (see docs/pipelines/STEENROD.md sec 1 and
+//docs/ARCHITECTURE.md sec 1 for why BP_*BP/I's t_i and the classical
+//pipeline's generators share a grading and encoding by construction, not
+//coincidence).
 P reduce_BPBP_mod_I(BPBP const &x);
 
 //Reduce one coaction-matrix row (a sparse vectors<matrix_index,BPBP>) to its

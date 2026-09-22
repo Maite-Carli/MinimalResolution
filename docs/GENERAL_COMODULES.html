@@ -189,6 +189,35 @@ both differ from <code>BPBP_opers.monomial(singleVar(1,1),unit(1))</code>.)</p>
 <p>This matters because getting it backwards fails <em>silently</em> in a particularly
 nasty way: <code>η_R(v_1)</code> is not in the augmentation ideal, so a coaction using it
 violates counitality — and, per the caveats below, nothing checks that.</p>
+<p><strong>The same trap caught the reduction itself.</strong> <code>reduce_BPBP_mod_I</code>
+(<code>BP_mod_I.cpp</code>) was written for the layout the type name suggests — inner
+slot = <code>BP_*</code> coefficients, outer = the <code>t_i</code> — and so read both slots
+backwards: it reduced <code>t_1</code> to <strong>0</strong> and <code>η_R(v_1)</code> to <strong><code>t_1</code></strong>. Since every
+off-diagonal coaction entry is a polynomial in the <code>t_i</code>, that silently
+handed phase 2 a <em>split</em> comodule, i.e. the mod-<code>I</code> model of <code>S⁰ ∨ S⁴</code> in
+place of the one for <code>S/α₁</code>. Two values pin the convention down and are worth
+re-checking after any change to that file:</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>input</th>
+<th>must reduce to</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>BP_oper.h0()</code> (= <code>t_1</code>)</td>
+<td><code>t_1</code></td>
+</tr>
+<tr>
+<td><code>BPBP_opers.monomial(singleVar(1,1), unit(1))</code> (= <code>η_R(v_1)</code>)</td>
+<td><code>0</code> — <code>I</code> is invariant, so <code>η_R(I) ⊆ I·BP_*BP</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>sphere</code> regression below cannot catch this (its coaction is <code>1</code>, which
+reduces correctly either way), and in the <code>S/α₁</code> case the final <code>Ext</code> came
+out right anyway — the BP-side lift uses the true <code>BP_*BP</code> coaction and the
+model only guides the generator search, so the damage was confined to how the
+resolution&#39;s generators got indexed. That is luck, not a guarantee.</p>
 <h2 id="verifying-a-change-here">Verifying a change here<a class="heading-anchor" href="#verifying-a-change-here">#</a></h2>
 <p>Because resolving the trivial comodule through this path should produce
 <em>exactly</em> the same answer as the existing <code>mr_BP</code> (they&#39;re computing the

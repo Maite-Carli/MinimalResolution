@@ -180,6 +180,26 @@ This matters because getting it backwards fails *silently* in a particularly
 nasty way: `η_R(v_1)` is not in the augmentation ideal, so a coaction using it
 violates counitality — and, per the caveats below, nothing checks that.
 
+**The same trap caught the reduction itself.** `reduce_BPBP_mod_I`
+(`BP_mod_I.cpp`) was written for the layout the type name suggests — inner
+slot = `BP_*` coefficients, outer = the `t_i` — and so read both slots
+backwards: it reduced `t_1` to **0** and `η_R(v_1)` to **`t_1`**. Since every
+off-diagonal coaction entry is a polynomial in the `t_i`, that silently
+handed phase 2 a *split* comodule, i.e. the mod-`I` model of `S⁰ ∨ S⁴` in
+place of the one for `S/α₁`. Two values pin the convention down and are worth
+re-checking after any change to that file:
+
+| input | must reduce to |
+|---|---|
+| `BP_oper.h0()` (= `t_1`) | `t_1` |
+| `BPBP_opers.monomial(singleVar(1,1), unit(1))` (= `η_R(v_1)`) | `0` — `I` is invariant, so `η_R(I) ⊆ I·BP_*BP` |
+
+The `sphere` regression below cannot catch this (its coaction is `1`, which
+reduces correctly either way), and in the `S/α₁` case the final `Ext` came
+out right anyway — the BP-side lift uses the true `BP_*BP` coaction and the
+model only guides the generator search, so the damage was confined to how the
+resolution's generators got indexed. That is luck, not a guarantee.
+
 ## Verifying a change here
 
 Because resolving the trivial comodule through this path should produce

@@ -10,9 +10,22 @@ Fp reduce_BP_mod_I(BP const &x){
 P reduce_BPBP_mod_I(BPBP const &x){
 	P result;
 	for(auto &tm : x.dataArray){
-		Fp c = reduce_BP_mod_I(tm.coeficient);
-		if(c!=0)
-			result.push({tm.ind, c});
+		//BPBP's OUTER exponent indexes the v_i and its INNER (coefficient)
+		//BP's exponent indexes the t_i -- the opposite of what the type name
+		//suggests; see the warning at the top of comodules.cpp. So a term
+		//with a nonzero outer exponent carries a v, hence lies in
+		//I = (p,v_1,v_2,...) and dies. (This holds whichever unit the outer
+		//slot uses: eta_L(v_n) is in I by definition, and eta_R(v_n) is in
+		//I*BPBP because I is invariant.)
+		if(tm.ind != 0) continue;
+		//what is left is a polynomial in the t_i with Z_3 coefficients;
+		//reduce those mod p. The inner terms are already in index order, so
+		//pushing them in order keeps the result canonical.
+		for(auto &im : tm.coeficient.dataArray){
+			Fp c = (Fp)(im.coeficient % 3);
+			if(c!=0)
+				result.push({im.ind, c});
+		}
 	}
 	return result;
 }
