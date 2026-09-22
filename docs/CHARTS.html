@@ -56,9 +56,38 @@ belongs at height <strong>1</strong>. The chart takes the stem from the printed 
 reads <code>s</code> off the <code>[s-n]</code> bracket in the class name instead. The internal
 degree is recoverable as <code>t = x + y</code>.</p>
 <p><code>--grading algnov</code> plots <code>mr_BP</code>'s printed pair as-is, one dot per class,
-keeps the 3-multiples as vertical towers, and draws the algebraic Novikov
-differentials. That view is useful for checking a run against the raw
-tables; it is not an ANSS chart.</p>
+draws the algebraic Novikov differentials, and joins each class to its
+multiples by the bottom generator of the base ring's maximal invariant ideal
+— <code>p = v₀</code> over <code>BP_*</code>, which makes vertical towers, or <code>v_n</code> over
+<code>BP_*/I_n</code>, which does not (<code>v_n</code> raises the stem as well as the
+filtration). That view is useful for checking a run against the raw tables;
+it is not an ANSS chart.</p>
+<h3 id="what-a-class-name-means">What a class name means<a class="heading-anchor" href="#what-a-class-name-means">#</a></h3>
+<p>A name like <code>v0^1v1^3[1-1]</code> has two parts:</p>
+<pre><code>&lt;monomial in the base ring&gt;[&lt;homological degree s&gt;-&lt;index of the generator of V_s&gt;]</code></pre>
+<p>For a minimal resolution <code>0 → M → F_0 → F_1 → …</code> with <code>F_s = Γ ⊗_A V_s</code>, the
+complex of primitives is <code>V_0 → V_1 → …</code>, with each <code>V_s</code> free over the base
+ring <code>A</code> — <code>BP_*</code>, or <code>BP_*/I_n</code> for a height <code>n</code> run. So <code>[s-g]</code> names
+generator <code>g</code> of <code>V_s</code>, and the monomial is that generator's coefficient in
+<code>A</code>. <code>algNov.cpp</code>'s <code>naming</code>/<code>output</code> build it: slot 1 of a name is the
+<code>v₀</code>-exponent and slots 2… are the <code>v₁…v₅</code> exponents, printed as <code>v&lt;i-1&gt;^e</code>.
+Note <code>v₀</code> is <code>p</code> — it is the <code>p</code>-adic valuation of the coefficient
+(<code>algNov.cpp:28</code>), not a polynomial generator — so no name carries a <code>v0</code> at
+height ≥ 1, where <code>p</code> is 0.</p>
+<p>For <code>mod_p</code> the zero line therefore reads <code>[0-0]</code>, <code>v1^1[0-0]</code>, <code>v1^2[0-0]</code>,
+…: <code>BP_*/p</code> has rank 1 in degree 0, so <code>V_0</code> has a single generator,
+corresponding to <code>1 ∈ BP_*/p</code>, and <code>v1^n[0-0]</code> is <code>v₁ⁿ · 1</code> in stem <code>4n</code>
+(<code>|v₁| = 4</code>). That is right on the nose, since <code>Ext⁰ = Prim(M)</code> and the
+invariants of <code>BP_*/p</code> are exactly <code>F₃[v₁]</code>. The sphere's zero line is the
+same <code>[0-0]</code> with prefix <code>v0^j</code>, spelling out <code>Ext⁰(BP_*) = Z₍₃₎</code>.</p>
+<p><strong>The monomial is a leading term, not the class.</strong> The tables list a basis of
+<code>gr Ext</code> for the algebraic Novikov filtration, so in general <code>v1^1[2-0]</code>
+means "leading term <code>v₁</code> times generator 0 of <code>V_2</code>" — a statement about the
+associated graded, which is why §2 warns against reading <code>v0</code> in a name as
+"divisible by 3". In filtration 0 the distinction collapses whenever <code>Ext⁰</code>
+consists of honest invariants of <code>A</code>, as it does for <code>BP_*/p</code>. The <code>g</code> in
+<code>[s-g]</code> is just a position in the generator list this particular resolution
+chose; it carries no further meaning.</p>
 <h2 id="2-one-mark-per-cyclic-summand">2. One mark per cyclic summand<a class="heading-anchor" href="#2-one-mark-per-cyclic-summand">#</a></h2>
 <p>The classes in the table are an F₃-basis of <code>gr Ext</code>, so a <code>Z/9</code> appears as
 <em>two</em> of them. Drawing one dot each would misrepresent the group, so the
@@ -125,7 +154,7 @@ by the run rather than inferred from the tables.</p>
 height <code>n ≥ 1</code>, so there is nothing to chain, and the summands are singletons
 by mathematics rather than for want of a table. What a height-<code>n</code> run writes
 as <code>&lt;prefix&gt;AANSS_a&lt;n&gt;.txt</code> is multiplication by <code>v_n</code> — the bottom generator
-of the base ring&#39;s maximal invariant ideal, the true analogue of <code>a0</code> — and
+of the base ring's maximal invariant ideal, the true analogue of <code>a0</code> — and
 that is structure data, not summand data: the <code>--grading algnov</code> view draws
 those lines, and the ANSS view does not use them.</p>
 <p>A class killed by an algebraic Novikov differential is dropped, along with

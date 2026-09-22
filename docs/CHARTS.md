@@ -51,9 +51,46 @@ reads `s` off the `[s-n]` bracket in the class name instead. The internal
 degree is recoverable as `t = x + y`.
 
 `--grading algnov` plots `mr_BP`'s printed pair as-is, one dot per class,
-keeps the 3-multiples as vertical towers, and draws the algebraic Novikov
-differentials. That view is useful for checking a run against the raw
-tables; it is not an ANSS chart.
+draws the algebraic Novikov differentials, and joins each class to its
+multiples by the bottom generator of the base ring's maximal invariant ideal
+— `p = v₀` over `BP_*`, which makes vertical towers, or `v_n` over
+`BP_*/I_n`, which does not (`v_n` raises the stem as well as the
+filtration). That view is useful for checking a run against the raw tables;
+it is not an ANSS chart.
+
+### What a class name means
+
+A name like `v0^1v1^3[1-1]` has two parts:
+
+```
+<monomial in the base ring>[<homological degree s>-<index of the generator of V_s>]
+```
+
+For a minimal resolution `0 → M → F_0 → F_1 → …` with `F_s = Γ ⊗_A V_s`, the
+complex of primitives is `V_0 → V_1 → …`, with each `V_s` free over the base
+ring `A` — `BP_*`, or `BP_*/I_n` for a height `n` run. So `[s-g]` names
+generator `g` of `V_s`, and the monomial is that generator's coefficient in
+`A`. `algNov.cpp`'s `naming`/`output` build it: slot 1 of a name is the
+`v₀`-exponent and slots 2… are the `v₁…v₅` exponents, printed as `v<i-1>^e`.
+Note `v₀` is `p` — it is the `p`-adic valuation of the coefficient
+(`algNov.cpp:28`), not a polynomial generator — so no name carries a `v0` at
+height ≥ 1, where `p` is 0.
+
+For `mod_p` the zero line therefore reads `[0-0]`, `v1^1[0-0]`, `v1^2[0-0]`,
+…: `BP_*/p` has rank 1 in degree 0, so `V_0` has a single generator,
+corresponding to `1 ∈ BP_*/p`, and `v1^n[0-0]` is `v₁ⁿ · 1` in stem `4n`
+(`|v₁| = 4`). That is right on the nose, since `Ext⁰ = Prim(M)` and the
+invariants of `BP_*/p` are exactly `F₃[v₁]`. The sphere's zero line is the
+same `[0-0]` with prefix `v0^j`, spelling out `Ext⁰(BP_*) = Z₍₃₎`.
+
+**The monomial is a leading term, not the class.** The tables list a basis of
+`gr Ext` for the algebraic Novikov filtration, so in general `v1^1[2-0]`
+means "leading term `v₁` times generator 0 of `V_2`" — a statement about the
+associated graded, which is why §2 warns against reading `v0` in a name as
+"divisible by 3". In filtration 0 the distinction collapses whenever `Ext⁰`
+consists of honest invariants of `A`, as it does for `BP_*/p`. The `g` in
+`[s-g]` is just a position in the generator list this particular resolution
+chose; it carries no further meaning.
 
 ## 2. One mark per cyclic summand
 
