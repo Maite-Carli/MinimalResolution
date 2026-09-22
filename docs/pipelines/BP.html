@@ -109,13 +109,16 @@ tables; <code>BPmain.cpp</code> constructs a fresh <code>BP_Op</code> (inside <c
 three files for the matching <code>&lt;halfT&gt;</code>. There is no dependency the other way.</li>
 <li><strong>Degree convention</strong>: <code>&lt;halfT&gt;</code> is passed straight through as <code>max_degree</code> to
 <code>monomial_index</code> (BPtable.cpp:10, BP_init.cpp:9), and <code>monomial_index</code> bounds monomials by
-<code>total_deg(e)</code> using <code>xnDeg(n) = 2(3^n-1)</code> (exponents.cpp:29, the <em>un-halved</em> topological
-degree <code>|v_n|</code>). The README&#39;s &quot;first parameter is half of t&quot; warning appears to be inherited
-verbatim from Guozhen Wang&#39;s original p=2 code; nothing in this p=3 BP code path visibly
-halves the degree again before comparing to <code>xnDeg</code>.
-<strong>TODO(math):</strong> determine whether &quot;half of t&quot; is still literally correct for this p=3 fork or
-is a stale carry-over from the p=2 version (the README itself flags this uncertainty at
-README.md:52).</li>
+<code>total_deg(e)</code> using <code>xnDeg(n) = 2(3^n-1)</code> (exponents.cpp:31, the <em>un-halved</em> topological
+degree <code>|v_n|</code>). The README&#39;s &quot;first parameter is half of t&quot; warning was inherited verbatim
+from Guozhen Wang&#39;s original p=2 code; nothing in this p=3 BP code path halves the degree
+again before comparing to <code>xnDeg</code>.
+<strong>Resolved:</strong> &quot;half of t&quot; is a stale p=2 carry-over — <code>&lt;halfT&gt;</code> is the maximal internal
+degree <code>t</code> itself. Measured: <code>./mr_st 24 6</code> stops at generator degree 24, and
+<code>./mr_BP_comod 24 8</code> contains <code>[4-0] |deg=(20,4)</code> (<code>beta_1^2</code>: stem 20, filtration 4,
+internal degree 24), which the same run at 23 does not. The README and
+<code>docs/BUILD_AND_RUN.md</code> have been corrected accordingly; the <code>&lt;halfT&gt;</code> placeholder survives
+in filenames and docs as a misnomer.</li>
 <li><strong>Segfault mechanism (mismatched parameters)</strong>: <code>matrix&lt;R&gt;::load(reader, rk)</code> (matrices/4.h:
 30-37) reads exactly <code>rk</code> rows by repeatedly calling <code>ModuleOp&lt;index,R&gt;::load</code> (modules/5.h:
 40-49), which reads a <strong>raw, unchecked <code>int32_t length</code></strong> from the stream and then loops

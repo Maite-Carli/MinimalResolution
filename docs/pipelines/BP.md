@@ -83,13 +83,16 @@ everything is already reduced to `Z3` (64-bit fixed-precision 3-adic integers, Z
   three files for the matching `<halfT>`. There is no dependency the other way.
 - **Degree convention**: `<halfT>` is passed straight through as `max_degree` to
   `monomial_index` (BPtable.cpp:10, BP_init.cpp:9), and `monomial_index` bounds monomials by
-  `total_deg(e)` using `xnDeg(n) = 2(3^n-1)` (exponents.cpp:29, the *un-halved* topological
-  degree `|v_n|`). The README's "first parameter is half of t" warning appears to be inherited
-  verbatim from Guozhen Wang's original p=2 code; nothing in this p=3 BP code path visibly
-  halves the degree again before comparing to `xnDeg`.
-  **TODO(math):** determine whether "half of t" is still literally correct for this p=3 fork or
-  is a stale carry-over from the p=2 version (the README itself flags this uncertainty at
-  README.md:52).
+  `total_deg(e)` using `xnDeg(n) = 2(3^n-1)` (exponents.cpp:31, the *un-halved* topological
+  degree `|v_n|`). The README's "first parameter is half of t" warning was inherited verbatim
+  from Guozhen Wang's original p=2 code; nothing in this p=3 BP code path halves the degree
+  again before comparing to `xnDeg`.
+  **Resolved:** "half of t" is a stale p=2 carry-over — `<halfT>` is the maximal internal
+  degree `t` itself. Measured: `./mr_st 24 6` stops at generator degree 24, and
+  `./mr_BP_comod 24 8` contains `[4-0] |deg=(20,4)` (`beta_1^2`: stem 20, filtration 4,
+  internal degree 24), which the same run at 23 does not. The README and
+  `docs/BUILD_AND_RUN.md` have been corrected accordingly; the `<halfT>` placeholder survives
+  in filenames and docs as a misnomer.
 - **Segfault mechanism (mismatched parameters)**: `matrix<R>::load(reader, rk)` (matrices/4.h:
   30-37) reads exactly `rk` rows by repeatedly calling `ModuleOp<index,R>::load` (modules/5.h:
   40-49), which reads a **raw, unchecked `int32_t length`** from the stream and then loops

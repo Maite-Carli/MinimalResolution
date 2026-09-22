@@ -78,14 +78,15 @@ unexplained numerical coincidence.</li>
 <code>g++ -g exponents.cpp Fp.cpp mon_index.cpp steenrod.cpp steenrod_init.cpp stmain.cpp -std=c++11 -I./ -Wall -Wfatal-errors -O0 -fopenmp -o mr_st</code>
 (<code>st_compiling</code>).</li>
 <li>Usage (README, adapted from the BP example at <code>README.md:28-30</code>):
-<code>./mr_st &lt;half-of-maxdeg&gt; &lt;resolution-length&gt;</code><ul>
-<li><code>argv[1]</code> → <code>maxdeg</code> (<code>stmain.cpp:8</code>): <strong>README warning — &quot;the first
-input parameter is half of t&quot;</strong> (<code>README.md:44</code>); the code passes it
-straight through as <code>maxdeg</code> to <code>SteenrodInit</code>/<code>monomial_index</code>, so the
-actual internal-degree cutoff used by the program is <code>argv[1]</code>, but by
-the project&#39;s convention that value already represents <code>t/2</code> in the
-reader&#39;s intended grading (this halving convention is asserted only in
-the README, not visible in <code>stmain.cpp</code> itself).</li>
+<code>./mr_st &lt;maxdeg&gt; &lt;resolution-length&gt;</code><ul>
+<li><code>argv[1]</code> → <code>maxdeg</code> (<code>stmain.cpp:8</code>): the code passes it straight
+through as <code>maxdeg</code> to <code>SteenrodInit</code>/<code>monomial_index</code>, and that is the
+internal-degree cutoff, full stop — degrees here are the un-halved
+topological ones (<code>xnDeg(n) = 2(3^n-1)</code>, <code>exponents.cpp:31</code>). The
+README&#39;s old &quot;half of t&quot; warning was a p=2 carry-over and has been
+corrected; measured, <code>./mr_st 24 6</code> prints generator degrees
+<code>0 | 4, 12 | 12, 20 | 16, 24 | 24</code> for <code>s = 0..4</code> (nothing at <code>s = 5</code>
+in range), i.e. exactly up to <code>t = argv[1]</code>.</li>
 <li><code>argv[2]</code> → <code>length</code> (<code>stmain.cpp:9</code>): resolution length <code>s</code>, i.e. number
 of resolution steps.</li>
 <li>Hardcoded prime: <code>SteenrodInit st(3, maxdeg, length, ...)</code>
@@ -358,12 +359,12 @@ open:</p>
 comodule construction (§5), and whether <code>kos</code> remains valid/intended for
 use at <code>p=3</code> given the hardcoded <code>SteenrodInit st(2, ...)</code> at
 <code>kosul.cpp:47</code>.</li>
-<li><strong>TODO(math):</strong> Whether/how the degree-halving convention (&quot;first
-parameter is half of t&quot;, README) interacts with the internal grading
-used by <code>Steenrod_Op</code>/<code>monomial_index</code> — the code itself treats <code>argv[1]</code>
-as a plain degree cutoff (<code>maxdeg</code>) with no visible halving or doubling,
-so the &quot;half of t&quot; semantics must be a convention enforced only by the
-caller&#39;s choice of what <code>t</code> means, not by any code in this pipeline.</li>
+<li><del><strong>TODO(math):</strong> Whether/how the degree-halving convention interacts with
+the internal grading used by <code>Steenrod_Op</code>/<code>monomial_index</code>.</del>
+<strong>Resolved:</strong> there is no halving convention at p=3. <code>argv[1]</code> is a plain
+internal-degree cutoff in full topological degrees, on this pipeline and
+the BP one alike (<code>docs/pipelines/BP.md</code> §2.2); the README&#39;s inherited
+&quot;half of t&quot; claim has been corrected.</li>
 </ul>
 
   <footer class="page-footer">
