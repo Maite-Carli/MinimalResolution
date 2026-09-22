@@ -52,6 +52,36 @@ BPInit::BPInit(int max_deg, int res_length, string etaL_data, string delta_data,
 	//set the Bockstein table
 	B_table.resize(res_length+1);
 	Btables.set_table(&B_table);
+	
+	//record what ring this run was done over, for whoever reads the tables
+	save_run_info();
+}
+
+//Write a machine-readable record of this run beside its tables.
+//
+//WHY THIS EXISTS. The output tables do not say which ring they were computed
+//over, and the answer changes what they MEAN: Ext^0 is torsion free over
+//BP_*, but an F_p-vector space over BP_*/I_n, so the same list of class names
+//denotes Z_(p)'s in one case and Z/p's in the other. Without this file a
+//consumer has to guess -- from the output filenames, or from whether any
+//class name happens to mention v_0 -- and a wrong guess is silently wrong,
+//not an error. anss_chart.py reads this; see docs/CHARTS.md.
+//
+//Format: one "key value" per line, '#' starts a comment.
+void BPInit::save_run_info(){
+	std::fstream info(director + "run_info.txt", std::ios::out);
+	if(!info.is_open()){
+		std::cerr << "warning: could not write " << director << "run_info.txt\n" << std::flush;
+		return;
+	}
+	info << "# what this run computed. Written by BPInit; read by anss_chart.py.\n";
+	info << "height " << height << "\n";
+	//The characteristic of the base ring -- 0 for BP_*, p for BP_*/I_n with
+	//n >= 1. This is the fact consumers actually need, so publish it rather
+	//than making each of them re-derive it from the height.
+	info << "characteristic " << (height > 0 ? Z3_oper.F3_opers.prime : 0) << "\n";
+	info << "max_degree " << max_degree << "\n";
+	info << "resolution_length " << resolution_length << "\n";
 }
 
 //do resolutions

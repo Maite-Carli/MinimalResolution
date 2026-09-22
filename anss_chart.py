@@ -9,8 +9,11 @@ The only inputs are the text tables mr_BP already writes; nothing is
 recomputed and nothing needs to be rebuilt.
 
     <halfT>_BPAANSS_table.txt    classes, and the algebraic Novikov differentials
-    <halfT>_BPAANSS_a0.txt       multiplication by 3
+    <halfT>_BPAANSS_a0.txt       multiplication by 3  (characteristic 0 only;
+                                 a run over BP_*/I_n writes AANSS_a<n>.txt,
+                                 multiplication by v_n, instead)
     <halfT>_BPAANSS_h0.txt       multiplication by h0 = alpha_1
+    <halfT>_BPrun_info.txt       which ring the run was done over
 
 Any comodule resolved by mr_BP_comod works the same way via -c/--comodule;
 nothing below is specific to the sphere.
@@ -26,9 +29,11 @@ but belongs at height 1.  The s used here is read off the "[s-n]" bracket in
 the class name instead; the printed stem a is used as-is.
 
 --grading algnov plots mr_BP's own (a, b) pair instead, one dot per class,
-keeps the 3-multiples as vertical towers, and draws the algebraic Novikov
-differentials.  That is the right picture for debugging a run; it is not an
-ANSS chart.
+draws the algebraic Novikov differentials, and joins each class to its
+multiples by the bottom generator of the base ring's maximal invariant ideal
+-- p = v_0 over BP_*, which makes vertical towers, or v_n over BP_*/I_n,
+which does not (v_n raises the stem by |v_n| as well as the filtration).
+That is the right picture for debugging a run; it is not an ANSS chart.
 
 What one mark means (--grading anss)
 ------------------------------------
@@ -49,11 +54,23 @@ the name of its generator (the class the rest of the tower is 3 times).
 Labels are the table's own names, typeset as v_0v_1^3[1-1] rather than
 v0^1v1^3[1-1]; --raw-labels keeps the raw text and --no-labels drops them.
 
-Filtration 0 is always drawn as Z_(3), by mathematics rather than by the
-table: Ext^0 = Prim(M) is a submodule of a free BP_*-module, hence
-torsion-free.  Above filtration 0 the order comes from the a0 chain, and
-where that chain hits the truncation (b = s + i is cut off at the resolution
-length, see docs/CHARTS.md) the mark gets the dashed ring.
+Filtration 0 is decided by mathematics rather than by the table, but WHICH
+mathematics depends on the ring the run was done over, which it reads from
+<prefix>run_info.txt (written by BPInit):
+
+    characteristic 0   the base ring is BP_*, M is free over it, so
+                       Ext^0 = Prim(M) is a submodule of a free BP_*-module,
+                       hence torsion-free: every summand there is Z_(3), a box.
+    characteristic p   the base ring is BP_*/I_n (n >= 1), which is an
+                       F_p-algebra, so p kills M and every Ext group -- Ext^0
+                       included -- is an F_p-vector space: every summand
+                       anywhere is Z/p, a dot.
+
+Getting that wrong is silent, which is why it is read and not assumed; pass
+--height for a run whose run_info.txt is missing.  Above filtration 0 in
+characteristic 0 the order comes from the a0 chain, and where that chain hits
+the truncation (b = s + i is cut off at the resolution length, see
+docs/CHARTS.md) the mark gets the dashed ring.
 
 Which classes are on the E2 page
 --------------------------------
@@ -76,6 +93,10 @@ import sys
 from collections import defaultdict
 
 # ---------------------------------------------------------------- parsing
+
+# this is the p=3 fork; the prime shows up in glyph names ("Z/3") and in the
+# characteristic of the base ring of a height > 0 run
+PRIME = 3
 
 NAME = r'(?:v\d+\^\d+)*\[\d+-\d+\]'
 CLASS_RE = re.compile(
@@ -122,6 +143,26 @@ def parse_table(path):
     return classes, diffs
 
 
+def parse_run_info(path):
+    """Read the run-info file BPInit writes beside its tables.
+
+    One "key value" per line, '#' starts a comment.  Returns None if the file
+    is absent, which is the case for output produced before runs started
+    recording this.
+    """
+    if not os.path.exists(path):
+        return None
+    info = {}
+    with open(path) as fh:
+        for line in fh:
+            line = line.split('#', 1)[0].strip()
+            if not line:
+                continue
+            key, _, value = line.partition(' ')
+            info[key.strip()] = value.strip()
+    return info
+
+
 def parse_mult(path):
     """Return the list of (source, target) pairs in a multiplication table.
 
@@ -164,12 +205,15 @@ def parse_mult_detail(path):
 
 # ------------------------------------------------------- cyclic summands
 
-def build_marks(classes, a0_products):
+def build_marks(classes, a0_products, ext0_torsion_free=True):
     """Group the surviving classes into cyclic summands, one mark each.
 
     Follows multiplication-by-3 chains: a class that is not 3 times any
     surviving class generates a summand, and the chain of its 3-multiples
     gives the order.  Returns a list of marks and a name -> mark index map.
+
+    ext0_torsion_free says whether the base ring has characteristic 0; see
+    make_mark, which is where it matters.
     """
     surv = {n: c for n, c in classes.items() if not c['killed']}
     maxb = max((c['algnov'] for c in surv.values()), default=0)
@@ -177,7 +221,8 @@ def build_marks(classes, a0_products):
         # No multiplication-by-3 table: the isomorphism types are simply not
         # knowable, so draw every class as a plain dot rather than inventing
         # towers (the caller has already warned about this).
-        marks = [make_mark(c, [n], True) for n, c in surv.items()]
+        marks = [make_mark(c, [n], True, ext0_torsion_free)
+                 for n, c in surv.items()]
         return marks, {m['name']: i for i, m in enumerate(marks)}
     prod = a0_products
 
@@ -211,23 +256,29 @@ def build_marks(classes, a0_products):
             cur = nxt
         if bounded and surv[chain[-1]]['algnov'] >= maxb:
             bounded = False                      # ends at the truncation edge
-        marks.append(make_mark(surv[name], chain, bounded))
+        marks.append(make_mark(surv[name], chain, bounded, ext0_torsion_free))
         for member in chain:
             owner[member] = len(marks) - 1
 
     for name in order:                           # defensive: nothing orphaned
         if name not in owner:
-            marks.append(make_mark(surv[name], [name], True))
+            marks.append(make_mark(surv[name], [name], True, ext0_torsion_free))
             owner[name] = len(marks) - 1
     return marks, owner
 
 
-def make_mark(gen, chain, bounded):
+def make_mark(gen, chain, bounded, ext0_torsion_free=True):
     """Classify one summand.
 
-    s = 0 is decided by mathematics, not by the tables: Ext^0 = Prim(M) is a
-    submodule of a free BP_*-module, hence torsion-free, so every summand
-    there is Z_(3) -- a box, whatever the a0 table can or cannot see.
+    s = 0 is decided by mathematics, not by the tables -- but only when that
+    mathematics applies.  Over BP_* the comodule is free, so Ext^0 = Prim(M)
+    is a submodule of a free BP_*-module, hence torsion-free, and every
+    summand there is Z_(3) -- a box, whatever the a0 table can or cannot see.
+    That is what ext0_torsion_free records, and it is FALSE for a run over
+    BP_*/I_n: there the base ring is an F_p-algebra, p kills M, and Ext^0 is
+    an F_p-vector space like every other Ext group, so its summands are Z/p
+    dots.  Asserting the box unconditionally is how this used to draw the
+    Ext^0 = F_3[v_1] of S/p as a row of Z_(3)'s.
 
     Above filtration 0 the order is read off the a0 chain.  If the chain runs
     into the truncation (its top has no a0 line, or sits in the last
@@ -235,7 +286,7 @@ def make_mark(gen, chain, bounded):
     the mark is drawn with a dashed outer ring and reported as ">=".
     """
     n = len(chain)
-    if gen['s'] == 0:
+    if gen['s'] == 0 and ext0_torsion_free:
         kind, group, trunc = 'box', 'Z_(3)', False
     elif bounded:
         kind, group, trunc = ('dot' if n == 1 else 'circles'), f'Z/3^{n}', False
@@ -461,20 +512,30 @@ def render(marks, diffs, struct, towers, opts):
         o.append(f'<text x="{pad_l:.1f}" y="{pad_t - 12:.1f}" font-size="14" '
                  f'fill="#222">{esc(opts.title)}</text>')
     if opts.legend and ykey == 's':
-        o.append(legend_svg(pad_l, H - 9))
+        o.append(legend_svg(pad_l, H - 9, char_p=getattr(opts, 'char_p', 0)))
     o.append(f'<text x="{W - pad_r:.1f}" y="{H - 8:.1f}" font-size="10" '
              f'text-anchor="end" fill="{C_TEXT}">stem  t-s</text>')
     o.append('</svg>')
     return '\n'.join(o)
 
 
-def legend_svg(x, y, r=2.6, gap=2.2):
-    """One line explaining the glyphs, drawn under the x-axis."""
+def legend_svg(x, y, r=2.6, gap=2.2, char_p=0):
+    """One line explaining the glyphs, drawn under the x-axis.
+
+    Over a base ring of characteristic p every summand is Z/p, so the box and
+    the rings cannot occur and advertising them would be misleading.
+    """
     parts, cx = [], x + r
     def label(text, cx, pad=0.0):
         parts.append(f'<text x="{cx + r + 3 + pad:.1f}" y="{y + 3:.1f}" '
                      f'font-size="8" fill="{C_TEXT}">{text}</text>')
         return cx + r + 3 + pad + 5.2 * len(text) + 16
+    if char_p:
+        parts.append(f'<circle cx="{cx:.1f}" cy="{y:.1f}" r="{r:.1f}" '
+                     f'fill="{C_DOT}" stroke="none"/>')
+        label(f'ℤ/{char_p}  (the base ring is an F_{char_p}-algebra, so every '
+              f'summand is ℤ/{char_p})', cx)
+        return '<g>' + ''.join(parts) + '</g>'
     parts.append(f'<rect x="{cx - r:.1f}" y="{y - r:.1f}" width="{2*r:.1f}" '
                  f'height="{2*r:.1f}" fill="{C_DOT}" stroke="{C_EDGE}" '
                  f'stroke-width="0.6"/>')
@@ -512,7 +573,8 @@ def main():
     ap.add_argument('--grading', choices=['anss', 'algnov'], default='anss',
                     help='anss (default): (t-s, s), one mark per cyclic '
                          'summand. algnov: mr_BP\'s printed (t-s, s+i), one '
-                         'dot per class, with 3-towers and differentials.')
+                         'dot per class, with differentials and the '
+                         'multiplication-by-p (or by v_n) lines.')
     ap.add_argument('--no-labels', dest='labels', action='store_false',
                     help='omit the class names next to the marks')
     ap.add_argument('--no-legend', dest='legend', action='store_false',
@@ -531,8 +593,12 @@ def main():
     ap.add_argument('--ring-gap', type=float, default=2.0,
                     help='px between concentric rings (default 2.0)')
     ap.add_argument('--omit-stem0', action='store_true',
-                    help='drop stem 0 (Ext^0 = Z_(3)), as the published '
-                         'charts do')
+                    help='drop stem 0, as the published charts do')
+    ap.add_argument('--height', type=int, default=None,
+                    help='the height n of the run, i.e. the base ring is '
+                         'BP_*/I_n (0 = BP_* itself). Normally read from '
+                         '<prefix>run_info.txt; pass it only for output '
+                         'produced before runs recorded it.')
     ap.add_argument('--max-stem', type=int, help='crop the chart')
     ap.add_argument('--max-filt', type=int, help='crop the chart')
     ap.add_argument('--unit', type=float, default=31.2,
@@ -564,13 +630,47 @@ def main():
     classes, diffs = parse_table(table)
     h0 = parse_mult(base + 'AANSS_h0.txt')
 
+    # Which ring was this run done over?  It decides what the tables MEAN --
+    # over BP_* a filtration-0 class generates a Z_(3), over BP_*/I_n a Z/p --
+    # so it is read from the run rather than assumed.
+    info = parse_run_info(base + 'run_info.txt')
+    if a.height is not None:                     # explicit override wins
+        height = a.height
+        char_p = PRIME if height > 0 else 0
+    elif info is not None and 'height' in info:
+        height = int(info['height'])
+        # the run publishes the characteristic as well, and that is the fact
+        # that actually matters here, so prefer it over re-deriving it
+        char_p = int(info.get('characteristic', PRIME if height > 0 else 0))
+    else:
+        height, char_p = 0, 0
+        sys.stderr.write(
+            f'note: {base}run_info.txt not found; assuming a run over BP_* '
+            f'itself (height 0). Pass --height if it is not.\n')
+
+    # multiplication by the bottom generator of the base ring's maximal
+    # invariant ideal: p = v_0 over BP_*, v_n over BP_*/I_n
+    a0_name = f'AANSS_a{height}.txt'
+
     if a.grading == 'anss':
         a.ykey = 's'
-        a0 = parse_mult_detail(base + 'AANSS_a0.txt')
-        if a0 is None:
-            sys.stderr.write(f'note: {base}AANSS_a0.txt not found; every '
-                             f'class drawn as its own Z/3\n')
-        marks, owner = build_marks(classes, a0)
+        if char_p:
+            # p is 0 in the base ring, so every Ext group is an F_p-vector
+            # space and every class is its own Z/p summand.  That is a fact
+            # about the ring, not a shrug at a missing table: the a<n> table
+            # records multiplication by v_n, which does not decompose Ext into
+            # cyclic summands the way multiplication by p does.
+            a0 = None
+        else:
+            a0 = parse_mult_detail(base + a0_name)
+            if a0 is None:
+                sys.stderr.write(
+                    f'warning: {base}{a0_name} not found, so the 3-tower '
+                    f'structure is unknown; every class is drawn as its own '
+                    f'Z/3, which UNDERSTATES any Z_(3) or Z/9 above '
+                    f'filtration 0\n')
+        a.char_p = char_p                        # render() reads this too
+        marks, owner = build_marks(classes, a0, ext0_torsion_free=not char_p)
         diffs, towers = [], []
         # h0-multiplication between summands: redirect each class to its mark
         struct, seen = [], set()
@@ -582,7 +682,8 @@ def main():
                     struct.append(e)
     else:
         a.ykey = 'algnov'
-        a0 = parse_mult(base + 'AANSS_a0.txt')
+        # same file, per height: multiplication by p, or by v_n
+        a0 = parse_mult(base + a0_name)
         marks = [dict(m, kind='dot', n=1, group='', members=[m['name']])
                  for m in classes.values()]
         names = {m['name'] for m in marks}
@@ -624,14 +725,22 @@ def main():
         for m in marks:
             kinds[m['kind']] += 1
         trunc = sum(1 for m in marks if m['truncated'])
-        print(f'{len(marks)} summands (stems {min(stems)}-{max(stems)}): '
-              f'{kinds["box"]} Z_(3) (box), {kinds["dot"]} Z/3 (dot), '
-              f'{kinds["circles"]} Z/3^n (rings), of which {trunc} have the '
-              f'top of the tower cut off by the range (dashed); '
+        ring = f'BP_*/I_{height}' if height else 'BP_*'
+        if char_p:
+            breakdown = (f'{kinds["dot"]} Z/{char_p} (dot) -- every summand, '
+                         f'since the base ring is an F_{char_p}-algebra')
+        else:
+            breakdown = (f'{kinds["box"]} Z_(3) (box), {kinds["dot"]} Z/3 '
+                         f'(dot), {kinds["circles"]} Z/3^n (rings), of which '
+                         f'{trunc} have the top of the tower cut off by the '
+                         f'range (dashed)')
+        print(f'{len(marks)} summands over {ring} '
+              f'(stems {min(stems)}-{max(stems)}): {breakdown}; '
               f'{len(struct)} alpha_1 lines -> {out}')
     else:
         print(f'{len(marks)} classes (stems {min(stems)}-{max(stems)}), '
-              f'{len(struct)} alpha_1 lines, {len(towers)} 3-tower lines, '
+              f'{len(struct)} alpha_1 lines, {len(towers)} '
+              f'{"v_" + str(height) if height else "3"}-multiplication lines, '
               f'{len(diffs)} differentials -> {out}')
     print(f'note: this run computes internal degree t = stem + s up to '
           f'{a.halfT}, so the page is cut off along a diagonal (drawn '

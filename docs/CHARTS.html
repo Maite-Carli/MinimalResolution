@@ -100,9 +100,34 @@ table's exact text, <code>--no-labels</code> drops labels entirely, and <code>--
 drops the key under the axis.</p>
 <p>Two rules decide the glyph, and they come from different places:</p>
 <ul>
-<li><strong>Filtration 0 is always <code>Z_(3)</code></strong>, by mathematics rather than by the tables: <code>Ext^0 = Prim(M)</code> is a submodule of a free <code>BP_*</code>-module, hence torsion-free. (This is why <code>S/α₁</code> has a box in stem 4: <code>Ext^{0,4}</code> there is <code>Z_(3){v_1x_0 + 3x_4}</code> — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a> §4.)</li>
+<li><strong>Filtration 0 is <code>Z_(3)</code> when the base ring has characteristic 0</strong>, by mathematics rather than by the tables: over <code>BP_*</code> the comodule is free, so <code>Ext^0 = Prim(M)</code> is a submodule of a free <code>BP_*</code>-module, hence torsion-free. (This is why <code>S/α₁</code> has a box in stem 4: <code>Ext^{0,4}</code> there is <code>Z_(3){v_1x_0 + 3x_4}</code> — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a> §4.)</li>
 <li><strong>Above filtration 0</strong> the order comes from the <code>a0</code> chain. Where that chain hits the truncation the mark gets the dashed ring: the printed second coordinate <code>s + i</code> is cut off at the resolution length (§6), and the <code>a0</code> table is pruned one step earlier still (<code>multiplication.cpp:169</code>), so near the top of the filtration range the top of a tower is simply not visible. At <code>halfT=185, L=14</code>, 60 of 344 summands are in that situation.</li>
 </ul>
+<h3 id="over-bp_i_n-every-summand-is-z3">Over <code>BP_*/I_n</code> every summand is <code>Z/3</code><a class="heading-anchor" href="#over-bp_i_n-every-summand-is-z3">#</a></h3>
+<p>Both rules above are about <code>BP_*</code>. A run at height <code>n ≥ 1</code> (see
+<a href="GENERAL_COMODULES.html"><code>GENERAL_COMODULES.md</code></a>) is over <code>BP_*/I_n</code>, which is
+an <code>F_3</code>-algebra: <code>p</code> kills the comodule, so <strong>every</strong> <code>Ext</code> group —
+filtration 0 included — is an <code>F_3</code>-vector space and every summand is a
+<code>Z/3</code> dot. There are no boxes and no rings, and the legend says so.</p>
+<p>The script does not guess this. Each run writes <code>&lt;prefix&gt;run_info.txt</code>:</p>
+<pre><code># what this run computed. Written by BPInit; read by anss_chart.py.
+height 1
+characteristic 3
+max_degree 30
+resolution_length 8</code></pre>
+<p>and the chart reads the characteristic from it. Output produced before runs
+recorded this has no such file; the script then assumes height 0, says so,
+and <code>--height n</code> overrides it. Getting this wrong is silent rather than an
+error — asserting <code>Z_(3)</code> unconditionally is what once drew the
+<code>Ext^0 = F_3[v_1]</code> of <code>S/p</code> as a row of boxes — which is why it is published
+by the run rather than inferred from the tables.</p>
+<p>One consequence for the <code>a0</code> chain: multiplication by <code>p</code> is the zero map at
+height <code>n ≥ 1</code>, so there is nothing to chain, and the summands are singletons
+by mathematics rather than for want of a table. What a height-<code>n</code> run writes
+as <code>&lt;prefix&gt;AANSS_a&lt;n&gt;.txt</code> is multiplication by <code>v_n</code> — the bottom generator
+of the base ring&#39;s maximal invariant ideal, the true analogue of <code>a0</code> — and
+that is structure data, not summand data: the <code>--grading algnov</code> view draws
+those lines, and the ANSS view does not use them.</p>
 <p>A class killed by an algebraic Novikov differential is dropped, along with
 the tag that killed it: lines containing <code>&lt;-</code> record a differential and both
 ends die. (The tag never gets a line of its own — <code>SS_table::output</code>,
@@ -112,8 +137,9 @@ removes both.)</p>
 for <code>v0</code> in the name. <code>v0^1[1-1]</code> carries a <code>v0</code> but is not 3 times anything
 that survives — its predecessor <code>[1-1]</code> supports a d₂ — and it is the
 generator of the <code>Z/9</code> in stem 11. A syntactic filter would hide it.</p>
-<p>If the <code>a0</code> file is missing the script says so and draws every class as a
-plain dot, since without it no isomorphism type is knowable.</p>
+<p>If the <code>a0</code> file is missing in a characteristic-0 run the script warns and
+draws every class as a plain dot, since without it no isomorphism type is
+knowable — which understates any <code>Z_(3)</code> or <code>Z/9</code> above filtration 0.</p>
 <h2 id="3-structure-lines">3. Structure lines<a class="heading-anchor" href="#3-structure-lines">#</a></h2>
 <p>Solid tan lines are multiplication by <code>h0 = (η_R(v1) - η_L(v1))/p</code> = α₁,
 read from <code>&lt;prefix&gt;AANSS_h0.txt</code>, so they run <code>(+3, +1)</code> — slope 1/3, as in

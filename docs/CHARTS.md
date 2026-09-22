@@ -81,8 +81,9 @@ drops the key under the axis.
 
 Two rules decide the glyph, and they come from different places:
 
-- **Filtration 0 is always `Z_(3)`**, by mathematics rather than by the
-  tables: `Ext^0 = Prim(M)` is a submodule of a free `BP_*`-module, hence
+- **Filtration 0 is `Z_(3)` when the base ring has characteristic 0**, by
+  mathematics rather than by the tables: over `BP_*` the comodule is free, so
+  `Ext^0 = Prim(M)` is a submodule of a free `BP_*`-module, hence
   torsion-free. (This is why `S/α₁` has a box in stem 4: `Ext^{0,4}` there is
   `Z_(3){v_1x_0 + 3x_4}` — see [`SES_CHECK.md`](SES_CHECK.md) §4.)
 - **Above filtration 0** the order comes from the `a0` chain. Where that
@@ -91,6 +92,39 @@ Two rules decide the glyph, and they come from different places:
   `a0` table is pruned one step earlier still (`multiplication.cpp:169`), so
   near the top of the filtration range the top of a tower is simply not
   visible. At `halfT=185, L=14`, 60 of 344 summands are in that situation.
+
+### Over `BP_*/I_n` every summand is `Z/3`
+
+Both rules above are about `BP_*`. A run at height `n ≥ 1` (see
+[`GENERAL_COMODULES.md`](GENERAL_COMODULES.md)) is over `BP_*/I_n`, which is
+an `F_3`-algebra: `p` kills the comodule, so **every** `Ext` group —
+filtration 0 included — is an `F_3`-vector space and every summand is a
+`Z/3` dot. There are no boxes and no rings, and the legend says so.
+
+The script does not guess this. Each run writes `<prefix>run_info.txt`:
+
+```
+# what this run computed. Written by BPInit; read by anss_chart.py.
+height 1
+characteristic 3
+max_degree 30
+resolution_length 8
+```
+
+and the chart reads the characteristic from it. Output produced before runs
+recorded this has no such file; the script then assumes height 0, says so,
+and `--height n` overrides it. Getting this wrong is silent rather than an
+error — asserting `Z_(3)` unconditionally is what once drew the
+`Ext^0 = F_3[v_1]` of `S/p` as a row of boxes — which is why it is published
+by the run rather than inferred from the tables.
+
+One consequence for the `a0` chain: multiplication by `p` is the zero map at
+height `n ≥ 1`, so there is nothing to chain, and the summands are singletons
+by mathematics rather than for want of a table. What a height-`n` run writes
+as `<prefix>AANSS_a<n>.txt` is multiplication by `v_n` — the bottom generator
+of the base ring's maximal invariant ideal, the true analogue of `a0` — and
+that is structure data, not summand data: the `--grading algnov` view draws
+those lines, and the ANSS view does not use them.
 
 A class killed by an algebraic Novikov differential is dropped, along with
 the tag that killed it: lines containing `<-` record a differential and both
@@ -103,8 +137,9 @@ for `v0` in the name. `v0^1[1-1]` carries a `v0` but is not 3 times anything
 that survives — its predecessor `[1-1]` supports a d₂ — and it is the
 generator of the `Z/9` in stem 11. A syntactic filter would hide it.
 
-If the `a0` file is missing the script says so and draws every class as a
-plain dot, since without it no isomorphism type is knowable.
+If the `a0` file is missing in a characteristic-0 run the script warns and
+draws every class as a plain dot, since without it no isomorphism type is
+knowable — which understates any `Z_(3)` or `Z/9` above filtration 0.
 
 ## 3. Structure lines
 

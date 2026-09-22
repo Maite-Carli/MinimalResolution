@@ -84,6 +84,11 @@ public:
 	//load the data for generators
 	void load_gens(string gens_data);
 	
+	//Write a self-describing record of this run beside its tables, so that
+	//downstream tools do not have to guess which ring it was done over.
+	//Called from the constructor, so every run has one.
+	void save_run_info();
+	
 	//the constructor. hgt defaults to 0, so every existing caller keeps the
 	//classical BP_* computation unchanged.
 	BPInit(int max_deg, int resolution_length, string etaL_data, string delta_data, string R2L_data, string dirname, int hgt = 0);
