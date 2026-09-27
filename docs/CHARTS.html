@@ -156,6 +156,22 @@ and <code>--height n</code> overrides it. Getting this wrong is silent rather th
 error — asserting <code>Z_(3)</code> unconditionally is what once drew the
 <code>Ext^0 = F_3[v_1]</code> of <code>S/p</code> as a row of boxes — which is why it is published
 by the run rather than inferred from the tables.</p>
+<p>That assumption is sound for output predating <code>run_info.txt</code>, since the
+height did not exist then, but not for a height-<code>n</code> table that has been
+<em>separated</em> from its <code>run_info.txt</code> — copying one into an examples directory
+is enough. So before assuming, the script cross-checks the table against
+itself: <code>v0</code> in a class name is the <code>p</code>-adic valuation of its coefficient, so
+a run over <code>BP_*</code> is full of them (<code>Ext^{0,0} = Z_(3)</code> alone contributes a
+whole <code>v_0</code>-tower; in practice about half the classes carry one) and a run
+over <code>BP_*/I_n</code> cannot produce a single one. If the metadata is missing <em>and</em>
+no class carries a <code>v0</code>, the script refuses to draw rather than guess:</p>
+<pre><code>error: cannot tell which ring this run was done over.
+  …run_info.txt is missing, and no class in
+  …AANSS_table.txt
+  carries a v0 -- which is what a run over BP_*/I_n looks like, since p is 0 there.</code></pre>
+<p>It is evidence, not proof — a height-0 run truncated before any <code>v_0</code>
+appeared would look the same — which is why it stops and asks for <code>--height</code>
+instead of flipping the assumption on its own.</p>
 <p>One consequence for the <code>a0</code> chain: multiplication by <code>p</code> is the zero map at
 height <code>n ≥ 1</code>, so there is nothing to chain, and the summands are singletons
 by mathematics rather than for want of a table. What a height-<code>n</code> run writes

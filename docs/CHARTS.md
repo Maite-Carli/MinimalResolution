@@ -162,6 +162,27 @@ error — asserting `Z_(3)` unconditionally is what once drew the
 `Ext^0 = F_3[v_1]` of `S/p` as a row of boxes — which is why it is published
 by the run rather than inferred from the tables.
 
+That assumption is sound for output predating `run_info.txt`, since the
+height did not exist then, but not for a height-`n` table that has been
+*separated* from its `run_info.txt` — copying one into an examples directory
+is enough. So before assuming, the script cross-checks the table against
+itself: `v0` in a class name is the `p`-adic valuation of its coefficient, so
+a run over `BP_*` is full of them (`Ext^{0,0} = Z_(3)` alone contributes a
+whole `v_0`-tower; in practice about half the classes carry one) and a run
+over `BP_*/I_n` cannot produce a single one. If the metadata is missing *and*
+no class carries a `v0`, the script refuses to draw rather than guess:
+
+```
+error: cannot tell which ring this run was done over.
+  …run_info.txt is missing, and no class in
+  …AANSS_table.txt
+  carries a v0 -- which is what a run over BP_*/I_n looks like, since p is 0 there.
+```
+
+It is evidence, not proof — a height-0 run truncated before any `v_0`
+appeared would look the same — which is why it stops and asks for `--height`
+instead of flipping the assumption on its own.
+
 One consequence for the `a0` chain: multiplication by `p` is the zero map at
 height `n ≥ 1`, so there is nothing to chain, and the summands are singletons
 by mathematics rather than for want of a table. What a height-`n` run writes

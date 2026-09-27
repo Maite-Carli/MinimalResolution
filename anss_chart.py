@@ -163,6 +163,22 @@ def parse_run_info(path):
     return info
 
 
+def looks_characteristic_p(classes):
+    """True if the table itself is evidence that p is 0 in the base ring.
+
+    `v0` in a class name is the p-adic valuation of that class's coefficient
+    (algNov.cpp:28), not a polynomial generator. So a run over BP_* is full of
+    them -- Ext^{0,0} = Z_(3) alone contributes a whole v_0-tower, and in
+    practice half the classes carry one -- while a run over BP_*/I_n, where p
+    is 0, cannot produce a single one.
+
+    This is evidence, not proof: a height-0 run truncated before any v_0
+    appeared would look the same. So the caller uses it to refuse to guess,
+    not to decide.
+    """
+    return bool(classes) and not any('v0^' in name for name in classes)
+
+
 def parse_mult(path):
     """Return the list of (source, target) pairs in a multiplication table.
 
@@ -648,6 +664,26 @@ def main():
         # that actually matters here, so prefer it over re-deriving it
         char_p = int(info.get('characteristic', PRIME if height > 0 else 0))
     else:
+        # No statement of the ring, so the height has to be assumed. That is
+        # safe for output produced before runs recorded it -- the height
+        # feature did not exist, so every such run really was over BP_* --
+        # but NOT for a height-n table that has been separated from its
+        # run_info.txt, where assuming BP_* draws filtration 0 as Z_(3) boxes
+        # and hedges on bidegrees holding several summands, both wrong. The
+        # table says which case this is, so check before assuming.
+        if looks_characteristic_p(classes):
+            sys.exit(
+                f'error: cannot tell which ring this run was done over.\n'
+                f'  {base}run_info.txt is missing, and no class in\n'
+                f'  {table}\n'
+                f'  carries a v0 -- which is what a run over BP_*/I_n looks '
+                f'like, since p is 0 there.\n'
+                f'Assuming BP_* would draw filtration 0 as Z_(3) boxes and '
+                f'hedge on the bidegrees\nholding several summands, and both '
+                f'would be wrong for such a run.\n'
+                f'Pass --height n (0 for BP_*, 1 for BP_*/p, 2 for '
+                f'BP_*/(p,v_1), ...), or put the\nrun_info.txt back beside '
+                f'the tables.')
         height, char_p = 0, 0
         sys.stderr.write(
             f'note: {base}run_info.txt not found; assuming a run over BP_* '
