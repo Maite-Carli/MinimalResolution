@@ -296,6 +296,26 @@ For `S/α₁` the same chart has boxes in stems 0 **and 4** and nothing in
 stems 3, 13, 23, 29 — see [`SES_CHECK.md`](SES_CHECK.md), which checks the
 whole page against the sphere's automatically.
 
+### Worked examples you can re-run
+
+`example_data/` holds three finished runs at `t = 30, length = 8` — the
+sphere, `S/α₁` and `S/p` — each as the tables the chart reads plus the SVG it
+produced. They are complete, so each redraws itself byte for byte:
+
+```sh
+./anss_chart.py 30 -c mod_p -d example_data -o /tmp/check.svg
+cmp /tmp/check.svg example_data/30_mod_panss_E2.svg    # identical
+```
+
+That makes them a regression test on the chart as well as an illustration: a
+change that alters any of the three shows up as a `cmp` failure. Each run
+contributes `AANSS_table.txt` (the classes), `AANSS_h0.txt` (α₁ lines),
+`AANSS_a0.txt` or `AANSS_a1.txt` (the summand structure — `a<n>` per the
+height) and `run_info.txt` (the ring). Drop any one of them and the redraw
+degrades: without `h0` the α₁ lines vanish, without `a0` the towers are
+understated, and without `run_info.txt` the `S/p` example refuses to draw at
+all rather than guess (§2).
+
 ## 6. Truncation: the page is cut off along a diagonal
 
 Neither axis is what limits the picture, and the y-axis is not capped at all

@@ -260,6 +260,20 @@ order <code>3^j</code>, and <code>j = 2</code> precisely when <code>3 | i</code>
 <p>For <code>S/α₁</code> the same chart has boxes in stems 0 <strong>and 4</strong> and nothing in
 stems 3, 13, 23, 29 — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a>, which checks the
 whole page against the sphere's automatically.</p>
+<h3 id="worked-examples-you-can-re-run">Worked examples you can re-run<a class="heading-anchor" href="#worked-examples-you-can-re-run">#</a></h3>
+<p><code>example_data/</code> holds three finished runs at <code>t = 30, length = 8</code> — the
+sphere, <code>S/α₁</code> and <code>S/p</code> — each as the tables the chart reads plus the SVG it
+produced. They are complete, so each redraws itself byte for byte:</p>
+<pre><code>./anss_chart.py 30 -c mod_p -d example_data -o /tmp/check.svg
+cmp /tmp/check.svg example_data/30_mod_panss_E2.svg    # identical</code></pre>
+<p>That makes them a regression test on the chart as well as an illustration: a
+change that alters any of the three shows up as a <code>cmp</code> failure. Each run
+contributes <code>AANSS_table.txt</code> (the classes), <code>AANSS_h0.txt</code> (α₁ lines),
+<code>AANSS_a0.txt</code> or <code>AANSS_a1.txt</code> (the summand structure — <code>a&lt;n&gt;</code> per the
+height) and <code>run_info.txt</code> (the ring). Drop any one of them and the redraw
+degrades: without <code>h0</code> the α₁ lines vanish, without <code>a0</code> the towers are
+understated, and without <code>run_info.txt</code> the <code>S/p</code> example refuses to draw at
+all rather than guess (§2).</p>
 <h2 id="6-truncation-the-page-is-cut-off-along-a-diagonal">6. Truncation: the page is cut off along a diagonal<a class="heading-anchor" href="#6-truncation-the-page-is-cut-off-along-a-diagonal">#</a></h2>
 <p>Neither axis is what limits the picture, and the y-axis is not capped at all
 — it grows to fit whatever the run produced. <strong>What cuts the page off is the
