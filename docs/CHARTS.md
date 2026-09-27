@@ -138,6 +138,13 @@ an `F_3`-algebra: `p` kills the comodule, so **every** `Ext` group —
 filtration 0 included — is an `F_3`-vector space and every summand is a
 `Z/3` dot. There are no boxes and no rings, and the legend says so.
 
+This also settles the group in *every* bidegree, not just filtration 0, so
+the uncertainty discussed under
+["What the glyph proves, and what it assumes"](#what-the-glyph-proves-and-what-it-assumes)
+below does not arise: several dots in one bidegree mean dimension `> 1`, and
+no hidden extension can merge them into a `Z/9`. The run's summary line says
+so, and no tooltip hedges.
+
 The script does not guess this. Each run writes `<prefix>run_info.txt`:
 
 ```
@@ -177,6 +184,50 @@ generator of the `Z/9` in stem 11. A syntactic filter would hide it.
 If the `a0` file is missing in a characteristic-0 run the script warns and
 draws every class as a plain dot, since without it no isomorphism type is
 knowable — which understates any `Z_(3)` or `Z/9` above filtration 0.
+
+### What the glyph proves, and what it assumes
+
+All of this concerns a run over `BP_*`. Over `BP_*/I_n` there is no `a0`
+chain to read — `p` is `0` there — and the class count settles every group on
+its own, so none of the caveats below apply; see
+[Over `BP_*/I_n` every summand is `Z/3`](#over-bp_i_n-every-summand-is-z3)
+above.
+
+The two halves of the evidence behave differently, so it is worth being
+precise about which conclusions are theorems:
+
+- **A non-zero `a0` entry is sound.** It says the leading term of `3x` is
+  non-zero, hence `3x ≠ 0` in `Ext`. So a chain of length `n` exhibits an
+  element of order `3^n`: a **lower** bound.
+- **A `-> o` entry is not.** It says the leading term of `3x` vanishes, which
+  means either `3x = 0` or `3x` has jumped further up the algebraic Novikov
+  filtration than the table can see — a hidden extension.
+- **The class count is exact.** The surviving classes are an F₃-basis of
+  `gr Ext`, so a bidegree with `n` of them has length exactly `n`.
+
+Put together: **when one chain accounts for every class in a bidegree, the
+group is pinned down**, because a group of length `n` containing an element
+of order `3^n` is cyclic. That is how `S/α₁` gets `Z/9` in (7,1) and `Z/27`
+in (11,1) rather than `Z/3 ⊕ Z/3` and `Z/9 ⊕ Z/3` — those have no element of
+the required order, and the `a0` chain exhibits one.
+
+When a bidegree holds **more than one** chain, the splitting drawn is only
+the finest possibility: a hidden extension could merge two of the marks into
+one bigger cyclic group. The script says how many bidegrees are in each
+state after every run, and the tooltip of any mark sharing its bidegree says
+so explicitly. At `halfT=35` all 15 of the sphere's bidegrees and all 14 of
+`S/α₁`'s are pinned down exactly; at `halfT=185, L=14` the sphere has 168
+pinned down, 37 known only as lower bounds (truncated towers) and 64 holding
+several summands.
+
+The repo does contain an independent record of this: the Bockstein tables
+`<prefix>BocSS_table.txt` are the `v_0`-Bockstein spectral sequence, whose
+`d_r` differentials are exactly the `p`-divisibility data, with
+`<prefix>B2A_table.txt` translating Bockstein names to algebraic Novikov
+ones. For `S/α₁` those tables confirm both orders above — `v0^2[1-0]` dies by
+a `d2` and `v0^3[1-1]` by a `d3` — and they are the natural place to look for
+the ambiguous bidegrees. The chart does not read them, for the grading
+reason in §4.
 
 ## 3. Structure lines
 
