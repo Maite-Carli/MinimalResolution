@@ -8,9 +8,7 @@ explanation of how to interpret the data files output by the program.
 Guozhen's original instructions are preserved at the bottom of this file.
 
 This fork adds the ability to resolve **any** finitely generated
-`BP_*BP`-comodule, not just the sphere — including ones like `BP_*(S/p)` that
-are free only over a quotient `BP_*/I_n`. The next section is all you need to
-run it.
+`BP_*BP`-comodule whose underlying BP_*-module is free over a quotient `BP_*/I_n`.
 
 ## Computing an E<sub>2</sub> page
 
