@@ -5,7 +5,6 @@ for computing the Adams-Novikov E<sub>2</sub> page for the sphere (originally
 at p=2), using the algebraic Novikov spectral sequence. See
 [this repository](https://github.com/ebelmont/ANSS_data) for sample data and an
 explanation of how to interpret the data files output by the program.
-Guozhen's original instructions are preserved at the bottom of this file.
 
 This fork adds the ability to resolve **any** finitely generated
 `BP_*BP`-comodule whose underlying BP_*-module is free over a quotient `BP_*/I_n`.
@@ -135,12 +134,12 @@ syntax is otherwise identical, and the same `./BPtab 30` still serves:
 `./mr_BP_comod --list` prints the available comodules with their heights,
 and `--help` the usage.
 
-The comodule name is optional for `mr_BP_comod` and defaults to `sphere`, so
-`./mr_BP_comod 30 8` is the sphere. **`anss_chart.py` is not the same**: with
-no `-c` it looks for `<t>_BP…`, the prefix a plain `mr_BP` run writes, so
-charting an `mr_BP_comod` sphere run needs `-c sphere` explicitly —
-`./anss_chart.py 30` on its own will report `30_BPAANSS_table.txt not
-found`.
+The comodule name is optional for both tools and means the sphere in both, so
+`./mr_BP_comod 30 8` followed by `./anss_chart.py 30` charts the sphere.
+With no `-c`, `anss_chart.py` prefers `<t>_BP…` — the prefix a plain `mr_BP`
+run writes — and falls back to `<t>_sphereBP…` when there is no such run,
+saying so; that fallback is exactly equivalent to passing `-c sphere`, output
+filename included.
 
 `n` is the **height**: the comodule's underlying module is free over
 `BP_*/I_n`, where `I_n = (p, v₁, …, v_{n−1})`. `n = 0` means free over `BP_*`
@@ -154,9 +153,9 @@ with each comodule, and picked up automatically.
 ### Do you need `mr_st` and `mr_BP`?
 
 Not for anything above — not even for the sphere. This trips people up
-because Guozhen's original instructions (at the bottom of this file) require
-`mr_st` before `mr_BP`, so it looks like a property of the sphere. It is not;
-it is a property of *which driver you use*.
+because Guozhen's original instructions require `mr_st` before `mr_BP`, so it
+looks like a property of the sphere. It is not; it is a property of *which
+driver you use*.
 
 Both routes run the same two phases: resolve `M/I` over the field-based
 `P = F₃[t₁, t₂, …]`, then lift that model to `BP_*BP`. They differ in where
@@ -189,11 +188,24 @@ shorter route — its tables are byte-identical to an `mr_st`/`mr_BP` run's.
 
 ### Adding your own comodule
 
+A comodule is entered as three pieces of data:
+
+- a **rank** — the number of generators of the underlying module (over
+  `BP_*`, or over `BP_*/I_n` at height `n`);
+- a **degree** for each generator — one internal degree per generator, so
+  `degree.size()` must equal `rank`. These are *full topological degrees*,
+  the same units `exponents.cpp` uses: `|v_n| = |t_n| = 2(3ⁿ−1)`, so
+  `|v₁| = |t₁| = 4` at `p = 3`;
+- a **coaction matrix** — for each generator `i`, the expansion of `ψ(x_i)`
+  in the other generators, as a row of coefficients in `BP_*BP`.
+
 Two edits, both in `comodules.cpp`; nothing else in the program changes.
 
-**1. A builder.** `coaction_rows(i)` returns generator `i`'s coaction as
-sparse `(j, c)` pairs — `j` another generator, `c` an element of `BP_*BP`.
-Rows need not be sorted; `set_comodule` sorts and reduces them.
+**1. A builder**, which sets those three. `coaction_rows(i)` returns
+generator `i`'s coaction as sparse `(j, c)` pairs — `j` another generator,
+`c` an element of `BP_*BP`; the pair `(j, c)` means the term `c ⊗ x_j` of
+`ψ(x_i)`, and omitted pairs are zero. Rows need not be sorted;
+`set_comodule` sorts and reduces them.
 
 ```cpp
 static void build_myComplex(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
@@ -214,11 +226,22 @@ static void build_myComplex(BP_Op &BP_oper, int &rank, std::vector<int> &degree,
 }
 ```
 
-**2. One row in `comodule_table`**, whose last field is the height:
+**2. One row in `comodule_table`**, registering the builder under the name
+you will type on the command line:
 
 ```cpp
-{"myComplex", "one-line description, shown by --list", build_myComplex, 0},
+//  name         description shown by --list               builder       height
+{"myComplex", "one-line description, shown by --list", build_myComplex,    0   },
 ```
+
+**The last number is the height `n`**, and it is not cosmetic: it tells the
+program which ring to do the whole computation over. `0` means the
+underlying module is free over `BP_*`; `n ≥ 1` means it is free only over
+`BP_*/I_n`, and then the base ring becomes `BP_*/I_n = F₃[v_n, v_{n+1}, …]`,
+the structure tables are reduced mod `I_n` as they load, `v₁…v_{n−1}`
+disappear from every monomial, and the Bockstein becomes the `v_n`-Bockstein.
+Get it wrong and the run does not fail — it computes something else (see the
+remarks below).
 
 Then `sh BP_comod_compile && ./mr_BP_comod 30 8 myComplex`.
 
@@ -303,74 +326,11 @@ inline comments. [`docs/index.html`](docs/index.html) is a generated
 documentation dashboard covering the class structure, module relationships,
 and full build/run pipeline — start there, or jump straight to
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the big picture. It's now
-grounded directly in `MinimalResolution.pdf` (the algorithm writeup
-referenced below), with citations to its definitions and propositions
+grounded directly in `MinimalResolution.pdf` (the algorithm writeup shipped
+in this repository), with citations to its definitions and propositions
 throughout rather than guesswork. It also flags a few things worth knowing
 before you dig in: several sub-pipelines (`kos`, `mr_ex`, and the whole
 motivic pipeline) are hardcoded to p=2 — the docs explain why this is an
 independent cross-check rather than an unfinished port — and there's some
 dead/duplicate code left over from earlier refactors — see
 `docs/ARCHITECTURE.md` §6–7 for specifics.
-
-******************************************************************************************************
-
-The algorithm is explained in the pdf file MinimalResolution.pdf
-
-The codes can be compiled with GCC. The GNU Multiple Precision Arithmetic Library should be installed.
-
-******************************************************************************************************
-
-To compile, run the following batch files:
-
-sh st_compiling
-
-sh BPtable_complile
-
-sh BP_compile
-
-*******************************************************************************************************
-
-To get the minimal resolution for BP/I, for t<=25, s<=21 (say), run
-
-./mr_st 25 21
-
-To get the structure maps of the BP Hopf algebroid for t<=25, run
-
-./BPtab 25
-
-To get the minimal resolution for BP, for t<=25, s<=20, run
-
-./mr_BP 25 20
-
-*******************************************************************************************************
-
-Warning:
-
-The first input parameter is the maximal internal degree t.
-
-The three executalbes are dependent, and should be run in the above order. 
-
-The s for the minimal resolution for BP/I should be at least one larger than the s for that of BP.
-
-Any mistake of the input could result in unpredictible behaviour, usually a break-down of the program such as a segmentation error.
-
-[EB asked here whether the p=3 version has different restrictions on the
-degrees. It does: this fork's first parameter is the internal degree t
-itself, not half of it, so the three examples above are truncated at t<=25
-rather than t<=50. Guozhen's original text said "half of t"; that is a p=2
-carry-over (the p=2 code is not in this repo to check against, but its
-degrees 2(2^n - 1) are all even, so a halved convention there is plausible).
-Here exponents.cpp:31 holds the full topological degrees
-|v_n| = |t_n| = 2(3^n - 1), so |v_1| = 4, and monomial_index keeps every
-monomial of degree d <= argv[1] (mon_index.cpp:44) on both the BP side
-(BP.cpp:8) and the Steenrod side (steenrod.cpp:5).
-
-Verified: ./mr_st 24 6 tops out at generator degree 24, and ./mr_BP_comod
-24 8 produces classes of internal degree t = 24 (beta_1^2 = [4-0], printed
-|deg=(20,4)), while the same run at 23 stops at t = 20. A degree-t class
-needs argv[1] >= t, and note that only the v_n/t_n with |v_n| <= argv[1] are
-built at all (mon_index.cpp:12-15, used at BPtable.cpp:12), so v_2/t_2 first
-appear at 16 and v_3/t_3 at 52.
-
-Classes are printed as |deg=(t-s, s+i): the stem t-s, then the homological
-degree s plus the algebraic Novikov filtration i. See docs/CHARTS.md.]

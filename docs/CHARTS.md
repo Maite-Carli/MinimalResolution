@@ -30,6 +30,13 @@ charts for different complexes don't overwrite each other. Nothing in the
 script is specific to the sphere: the glyphs, groups and structure lines
 below are all derived from whichever run's tables it is pointed at.
 
+With no `-c` the prefix is `<halfT>_BP...`, what a plain `mr_BP` run writes.
+Since `mr_BP_comod` also defaults to the sphere but writes
+`<halfT>_sphereBP...`, the script falls back to that prefix when there is no
+`<halfT>_BP...` run in the directory, and says so on stderr. The fallback is
+exactly equivalent to passing `-c sphere`, output filename and title
+included; an explicit `-c` never falls back.
+
 One caveat when reading such a chart: `mr_BP_comod` runs `mult_table()` (so
 the `α₁` structure lines are drawn) but deliberately **not** `mult_theta()`,
 which is specific to the Moore spectrum and carries a hardcoded table of

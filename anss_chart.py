@@ -638,14 +638,28 @@ def main():
 
     base = os.path.join(a.dir, f'{a.halfT}_{a.comodule}BP')
     table = base + 'AANSS_table.txt'
+    if not os.path.exists(table) and not a.comodule:
+        # With no -c the prefix is <halfT>_BP, which is what a plain mr_BP run
+        # writes. But `mr_BP_comod <halfT> <s>` with its comodule argument
+        # omitted also computes the sphere, and writes <halfT>_sphereBP
+        # instead -- so fall back to that rather than making the two tools
+        # disagree about what "no comodule named" means.
+        sphere = os.path.join(a.dir, f'{a.halfT}_sphereBP')
+        if os.path.exists(sphere + 'AANSS_table.txt'):
+            a.comodule, base = 'sphere', sphere
+            table = base + 'AANSS_table.txt'
+            sys.stderr.write(f'note: no {a.halfT}_BP... run here; charting '
+                             f'the mr_BP_comod sphere run instead\n')
     if not os.path.exists(table):
         if a.comodule:
             sys.exit(f'error: {table} not found.\n'
                      f'Run ./BPtab {a.halfT} && '
                      f'./mr_BP_comod {a.halfT} <s> {a.comodule} first, '
                      f'or pass --dir.')
-        sys.exit(f'error: {table} not found.\n'
-                 f'Run ./mr_st {a.halfT} <s+1> && ./BPtab {a.halfT} && '
+        sys.exit(f'error: {table} not found, and no '
+                 f'{a.halfT}_sphereBPAANSS_table.txt to fall back on.\n'
+                 f'Run ./BPtab {a.halfT} && ./mr_BP_comod {a.halfT} <s>, or '
+                 f'./mr_st {a.halfT} <s+1> && ./BPtab {a.halfT} && '
                  f'./mr_BP {a.halfT} <s> first, or pass --dir.')
 
     classes, diffs = parse_table(table)

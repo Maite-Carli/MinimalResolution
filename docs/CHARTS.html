@@ -38,6 +38,12 @@ Pass <code>-c/--comodule</code> to chart one:</p>
 charts for different complexes don't overwrite each other. Nothing in the
 script is specific to the sphere: the glyphs, groups and structure lines
 below are all derived from whichever run's tables it is pointed at.</p>
+<p>With no <code>-c</code> the prefix is <code>&lt;halfT&gt;_BP...</code>, what a plain <code>mr_BP</code> run writes.
+Since <code>mr_BP_comod</code> also defaults to the sphere but writes
+<code>&lt;halfT&gt;_sphereBP...</code>, the script falls back to that prefix when there is no
+<code>&lt;halfT&gt;_BP...</code> run in the directory, and says so on stderr. The fallback is
+exactly equivalent to passing <code>-c sphere</code>, output filename and title
+included; an explicit <code>-c</code> never falls back.</p>
 <p>One caveat when reading such a chart: <code>mr_BP_comod</code> runs <code>mult_table()</code> (so
 the <code>α₁</code> structure lines are drawn) but deliberately <strong>not</strong> <code>mult_theta()</code>,
 which is specific to the Moore spectrum and carries a hardcoded table of
