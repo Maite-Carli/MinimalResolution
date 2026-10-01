@@ -24,6 +24,26 @@ page covers what a separate strand of work established about <strong><code>S/α�
 gradings, and the group structures</strong>, with the arguments rather than just the
 conclusions, so they do not have to be re-derived. Commits <code>74bbdf1</code> ..
 <code>4ca4485</code> on <code>prime3</code>.</p>
+<h2 id="0-what-happened-in-brief">0. What happened, in brief<a class="heading-anchor" href="#0-what-happened-in-brief">#</a></h2>
+<p>The question that started it: <strong>how do you check the code's <code>S/α₁</code> output,
+when no E₂ page for it is published?</strong> The answer is that one does not need a
+published chart — the cofiber sequence determines the page from the sphere's,
+which <em>is</em> known and which this repo computes. That became <code>ses_check.py</code> and
+<a href="SES_CHECK.html"><code>SES_CHECK.md</code></a>, and the run agrees in every bidegree in range
+(§4).</p>
+<p>Four corrections came out of the same work:</p>
+<ol>
+<li><strong>The degree convention.</strong> <code>argv[1]</code> is the maximal internal degree <code>t</code>, not half of it; the README's claim was inherited from the p=2 original. Measured against runs at 12, 23, 24 and 40, then fixed in the README, <code>BUILD_AND_RUN.md</code> and the two pipeline docs that carried it as an open <code>TODO(math)</code>.</li>
+<li><strong>The charts.</strong> <code>anss_chart.py</code> drew one dot per class, which misrepresents a <code>Z/9</code> as two dots and hides a <code>Z_(3)</code> entirely. It now draws one mark per cyclic summand — box, dot, concentric rings — in the convention of Belmont's published p=3 chart, labelled by generator name.</li>
+<li><strong>A real bug</strong>, raised by another agent and confirmed by a probe against the live types: <code>reduce_BPBP_mod_I</code> had <code>BPBP</code>'s exponent slots transposed, so every off-diagonal coaction entry reduced to zero and phase 1 silently received a <em>split</em> comodule. Fixed in <code>35c6370</code>; see <code>../CLAUDE.md</code> trap 2. The sphere regression structurally could not catch it — the sphere's coaction is <code>1</code>, which reduces correctly either way.</li>
+<li><strong>The stem-4 class</strong>, which was challenged as obviously wrong and turned out to be right: <code>ker(α₁ : Ext^{0,0} → Ext^{1,4}) = 3Z_(3) ≠ 0</code> because α₁ has order 3. Settled by computing the primitive by hand, independently of both the long exact sequence and the code (§2).</li>
+</ol>
+<p>Two conclusions worth carrying forward. First, the checks that catch things
+here are the ones with an <em>independently known</em> answer — the sphere
+regression, the long exact sequence, a hand-computed <code>Ext^0</code>, the Bockstein
+tables — because nothing in this pipeline validates its own input and almost
+every failure mode is silent. Second, three of the four corrections above
+were found by running something and comparing, not by reading the code.</p>
 <h2 id="1-the-three-gradings">1. The three gradings<a class="heading-anchor" href="#1-the-three-gradings">#</a></h2>
 <p>Following Rognes's Definition 4.5 (<code>Adams_sseq.pdf</code>, in the repo root): an
 element of <code>E_r^{s,t}</code> has <strong>filtration <code>s</code></strong>, <strong>total degree <code>t-s</code></strong> (the

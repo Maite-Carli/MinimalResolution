@@ -8,6 +8,44 @@ gradings, and the group structures**, with the arguments rather than just the
 conclusions, so they do not have to be re-derived. Commits `74bbdf1` ..
 `4ca4485` on `prime3`.
 
+## 0. What happened, in brief
+
+The question that started it: **how do you check the code's `S/α₁` output,
+when no E₂ page for it is published?** The answer is that one does not need a
+published chart — the cofiber sequence determines the page from the sphere's,
+which *is* known and which this repo computes. That became `ses_check.py` and
+[`SES_CHECK.md`](SES_CHECK.md), and the run agrees in every bidegree in range
+(§4).
+
+Four corrections came out of the same work:
+
+1. **The degree convention.** `argv[1]` is the maximal internal degree `t`,
+   not half of it; the README's claim was inherited from the p=2 original.
+   Measured against runs at 12, 23, 24 and 40, then fixed in the README,
+   `BUILD_AND_RUN.md` and the two pipeline docs that carried it as an open
+   `TODO(math)`.
+2. **The charts.** `anss_chart.py` drew one dot per class, which
+   misrepresents a `Z/9` as two dots and hides a `Z_(3)` entirely. It now
+   draws one mark per cyclic summand — box, dot, concentric rings — in the
+   convention of Belmont's published p=3 chart, labelled by generator name.
+3. **A real bug**, raised by another agent and confirmed by a probe against
+   the live types: `reduce_BPBP_mod_I` had `BPBP`'s exponent slots
+   transposed, so every off-diagonal coaction entry reduced to zero and phase
+   1 silently received a *split* comodule. Fixed in `35c6370`; see
+   `../CLAUDE.md` trap 2. The sphere regression structurally could not catch
+   it — the sphere's coaction is `1`, which reduces correctly either way.
+4. **The stem-4 class**, which was challenged as obviously wrong and turned
+   out to be right: `ker(α₁ : Ext^{0,0} → Ext^{1,4}) = 3Z_(3) ≠ 0` because α₁
+   has order 3. Settled by computing the primitive by hand, independently of
+   both the long exact sequence and the code (§2).
+
+Two conclusions worth carrying forward. First, the checks that catch things
+here are the ones with an *independently known* answer — the sphere
+regression, the long exact sequence, a hand-computed `Ext^0`, the Bockstein
+tables — because nothing in this pipeline validates its own input and almost
+every failure mode is silent. Second, three of the four corrections above
+were found by running something and comparing, not by reading the code.
+
 ## 1. The three gradings
 
 Following Rognes's Definition 4.5 (`Adams_sseq.pdf`, in the repo root): an
