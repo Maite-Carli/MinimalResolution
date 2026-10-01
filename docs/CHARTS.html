@@ -38,6 +38,12 @@ Pass <code>-c/--comodule</code> to chart one:</p>
 charts for different complexes don't overwrite each other. Nothing in the
 script is specific to the sphere: the glyphs, groups and structure lines
 below are all derived from whichever run's tables it is pointed at.</p>
+<p>With no <code>-c</code> the prefix is <code>&lt;halfT&gt;_BP...</code>, what a plain <code>mr_BP</code> run writes.
+Since <code>mr_BP_comod</code> also defaults to the sphere but writes
+<code>&lt;halfT&gt;_sphereBP...</code>, the script falls back to that prefix when there is no
+<code>&lt;halfT&gt;_BP...</code> run in the directory, and says so on stderr. The fallback is
+exactly equivalent to passing <code>-c sphere</code>, output filename and title
+included; an explicit <code>-c</code> never falls back.</p>
 <p>One caveat when reading such a chart: <code>mr_BP_comod</code> runs <code>mult_table()</code> (so
 the <code>α₁</code> structure lines are drawn) but deliberately <strong>not</strong> <code>mult_theta()</code>,
 which is specific to the Moore spectrum and carries a hardcoded table of
@@ -56,9 +62,38 @@ belongs at height <strong>1</strong>. The chart takes the stem from the printed 
 reads <code>s</code> off the <code>[s-n]</code> bracket in the class name instead. The internal
 degree is recoverable as <code>t = x + y</code>.</p>
 <p><code>--grading algnov</code> plots <code>mr_BP</code>'s printed pair as-is, one dot per class,
-keeps the 3-multiples as vertical towers, and draws the algebraic Novikov
-differentials. That view is useful for checking a run against the raw
-tables; it is not an ANSS chart.</p>
+draws the algebraic Novikov differentials, and joins each class to its
+multiples by the bottom generator of the base ring's maximal invariant ideal
+— <code>p = v₀</code> over <code>BP_*</code>, which makes vertical towers, or <code>v_n</code> over
+<code>BP_*/I_n</code>, which does not (<code>v_n</code> raises the stem as well as the
+filtration). That view is useful for checking a run against the raw tables;
+it is not an ANSS chart.</p>
+<h3 id="what-a-class-name-means">What a class name means<a class="heading-anchor" href="#what-a-class-name-means">#</a></h3>
+<p>A name like <code>v0^1v1^3[1-1]</code> has two parts:</p>
+<pre><code>&lt;monomial in the base ring&gt;[&lt;homological degree s&gt;-&lt;index of the generator of V_s&gt;]</code></pre>
+<p>For a minimal resolution <code>0 → M → F_0 → F_1 → …</code> with <code>F_s = Γ ⊗_A V_s</code>, the
+complex of primitives is <code>V_0 → V_1 → …</code>, with each <code>V_s</code> free over the base
+ring <code>A</code> — <code>BP_*</code>, or <code>BP_*/I_n</code> for a height <code>n</code> run. So <code>[s-g]</code> names
+generator <code>g</code> of <code>V_s</code>, and the monomial is that generator's coefficient in
+<code>A</code>. <code>algNov.cpp</code>'s <code>naming</code>/<code>output</code> build it: slot 1 of a name is the
+<code>v₀</code>-exponent and slots 2… are the <code>v₁…v₅</code> exponents, printed as <code>v&lt;i-1&gt;^e</code>.
+Note <code>v₀</code> is <code>p</code> — it is the <code>p</code>-adic valuation of the coefficient
+(<code>algNov.cpp:28</code>), not a polynomial generator — so no name carries a <code>v0</code> at
+height ≥ 1, where <code>p</code> is 0.</p>
+<p>For <code>mod_p</code> the zero line therefore reads <code>[0-0]</code>, <code>v1^1[0-0]</code>, <code>v1^2[0-0]</code>,
+…: <code>BP_*/p</code> has rank 1 in degree 0, so <code>V_0</code> has a single generator,
+corresponding to <code>1 ∈ BP_*/p</code>, and <code>v1^n[0-0]</code> is <code>v₁ⁿ · 1</code> in stem <code>4n</code>
+(<code>|v₁| = 4</code>). That is right on the nose, since <code>Ext⁰ = Prim(M)</code> and the
+invariants of <code>BP_*/p</code> are exactly <code>F₃[v₁]</code>. The sphere's zero line is the
+same <code>[0-0]</code> with prefix <code>v0^j</code>, spelling out <code>Ext⁰(BP_*) = Z₍₃₎</code>.</p>
+<p><strong>The monomial is a leading term, not the class.</strong> The tables list a basis of
+<code>gr Ext</code> for the algebraic Novikov filtration, so in general <code>v1^1[2-0]</code>
+means "leading term <code>v₁</code> times generator 0 of <code>V_2</code>" — a statement about the
+associated graded, which is why §2 warns against reading <code>v0</code> in a name as
+"divisible by 3". In filtration 0 the distinction collapses whenever <code>Ext⁰</code>
+consists of honest invariants of <code>A</code>, as it does for <code>BP_*/p</code>. The <code>g</code> in
+<code>[s-g]</code> is just a position in the generator list this particular resolution
+chose; it carries no further meaning.</p>
 <h2 id="2-one-mark-per-cyclic-summand">2. One mark per cyclic summand<a class="heading-anchor" href="#2-one-mark-per-cyclic-summand">#</a></h2>
 <p>The classes in the table are an F₃-basis of <code>gr Ext</code>, so a <code>Z/9</code> appears as
 <em>two</em> of them. Drawing one dot each would misrepresent the group, so the
@@ -100,9 +135,56 @@ table's exact text, <code>--no-labels</code> drops labels entirely, and <code>--
 drops the key under the axis.</p>
 <p>Two rules decide the glyph, and they come from different places:</p>
 <ul>
-<li><strong>Filtration 0 is always <code>Z_(3)</code></strong>, by mathematics rather than by the tables: <code>Ext^0 = Prim(M)</code> is a submodule of a free <code>BP_*</code>-module, hence torsion-free. (This is why <code>S/α₁</code> has a box in stem 4: <code>Ext^{0,4}</code> there is <code>Z_(3){v_1x_0 + 3x_4}</code> — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a> §4.)</li>
+<li><strong>Filtration 0 is <code>Z_(3)</code> when the base ring has characteristic 0</strong>, by mathematics rather than by the tables: over <code>BP_*</code> the comodule is free, so <code>Ext^0 = Prim(M)</code> is a submodule of a free <code>BP_*</code>-module, hence torsion-free. (This is why <code>S/α₁</code> has a box in stem 4: <code>Ext^{0,4}</code> there is <code>Z_(3){v_1x_0 + 3x_4}</code> — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a> §4.)</li>
 <li><strong>Above filtration 0</strong> the order comes from the <code>a0</code> chain. Where that chain hits the truncation the mark gets the dashed ring: the printed second coordinate <code>s + i</code> is cut off at the resolution length (§6), and the <code>a0</code> table is pruned one step earlier still (<code>multiplication.cpp:169</code>), so near the top of the filtration range the top of a tower is simply not visible. At <code>halfT=185, L=14</code>, 60 of 344 summands are in that situation.</li>
 </ul>
+<h3 id="over-bp_i_n-every-summand-is-z3">Over <code>BP_*/I_n</code> every summand is <code>Z/3</code><a class="heading-anchor" href="#over-bp_i_n-every-summand-is-z3">#</a></h3>
+<p>Both rules above are about <code>BP_*</code>. A run at height <code>n ≥ 1</code> (see
+<a href="GENERAL_COMODULES.html"><code>GENERAL_COMODULES.md</code></a>) is over <code>BP_*/I_n</code>, which is
+an <code>F_3</code>-algebra: <code>p</code> kills the comodule, so <strong>every</strong> <code>Ext</code> group —
+filtration 0 included — is an <code>F_3</code>-vector space and every summand is a
+<code>Z/3</code> dot. There are no boxes and no rings, and the legend says so.</p>
+<p>This also settles the group in <em>every</em> bidegree, not just filtration 0, so
+the uncertainty discussed under
+<a href="#what-the-glyph-proves-and-what-it-assumes">"What the glyph proves, and what it assumes"</a>
+below does not arise: several dots in one bidegree mean dimension <code>&gt; 1</code>, and
+no hidden extension can merge them into a <code>Z/9</code>. The run's summary line says
+so, and no tooltip hedges.</p>
+<p>The script does not guess this. Each run writes <code>&lt;prefix&gt;run_info.txt</code>:</p>
+<pre><code># what this run computed. Written by BPInit; read by anss_chart.py.
+height 1
+characteristic 3
+max_degree 30
+resolution_length 8</code></pre>
+<p>and the chart reads the characteristic from it. Output produced before runs
+recorded this has no such file; the script then assumes height 0, says so,
+and <code>--height n</code> overrides it. Getting this wrong is silent rather than an
+error — asserting <code>Z_(3)</code> unconditionally is what once drew the
+<code>Ext^0 = F_3[v_1]</code> of <code>S/p</code> as a row of boxes — which is why it is published
+by the run rather than inferred from the tables.</p>
+<p>That assumption is sound for output predating <code>run_info.txt</code>, since the
+height did not exist then, but not for a height-<code>n</code> table that has been
+<em>separated</em> from its <code>run_info.txt</code> — copying one into an examples directory
+is enough. So before assuming, the script cross-checks the table against
+itself: <code>v0</code> in a class name is the <code>p</code>-adic valuation of its coefficient, so
+a run over <code>BP_*</code> is full of them (<code>Ext^{0,0} = Z_(3)</code> alone contributes a
+whole <code>v_0</code>-tower; in practice about half the classes carry one) and a run
+over <code>BP_*/I_n</code> cannot produce a single one. If the metadata is missing <em>and</em>
+no class carries a <code>v0</code>, the script refuses to draw rather than guess:</p>
+<pre><code>error: cannot tell which ring this run was done over.
+  …run_info.txt is missing, and no class in
+  …AANSS_table.txt
+  carries a v0 -- which is what a run over BP_*/I_n looks like, since p is 0 there.</code></pre>
+<p>It is evidence, not proof — a height-0 run truncated before any <code>v_0</code>
+appeared would look the same — which is why it stops and asks for <code>--height</code>
+instead of flipping the assumption on its own.</p>
+<p>One consequence for the <code>a0</code> chain: multiplication by <code>p</code> is the zero map at
+height <code>n ≥ 1</code>, so there is nothing to chain, and the summands are singletons
+by mathematics rather than for want of a table. What a height-<code>n</code> run writes
+as <code>&lt;prefix&gt;AANSS_a&lt;n&gt;.txt</code> is multiplication by <code>v_n</code> — the bottom generator
+of the base ring's maximal invariant ideal, the true analogue of <code>a0</code> — and
+that is structure data, not summand data: the <code>--grading algnov</code> view draws
+those lines, and the ANSS view does not use them.</p>
 <p>A class killed by an algebraic Novikov differential is dropped, along with
 the tag that killed it: lines containing <code>&lt;-</code> record a differential and both
 ends die. (The tag never gets a line of its own — <code>SS_table::output</code>,
@@ -112,9 +194,15 @@ removes both.)</p>
 for <code>v0</code> in the name. <code>v0^1[1-1]</code> carries a <code>v0</code> but is not 3 times anything
 that survives — its predecessor <code>[1-1]</code> supports a d₂ — and it is the
 generator of the <code>Z/9</code> in stem 11. A syntactic filter would hide it.</p>
-<p>If the <code>a0</code> file is missing the script says so and draws every class as a
-plain dot, since without it no isomorphism type is knowable.</p>
+<p>If the <code>a0</code> file is missing in a characteristic-0 run the script warns and
+draws every class as a plain dot, since without it no isomorphism type is
+knowable — which understates any <code>Z_(3)</code> or <code>Z/9</code> above filtration 0.</p>
 <h3 id="what-the-glyph-proves-and-what-it-assumes">What the glyph proves, and what it assumes<a class="heading-anchor" href="#what-the-glyph-proves-and-what-it-assumes">#</a></h3>
+<p>All of this concerns a run over <code>BP_*</code>. Over <code>BP_*/I_n</code> there is no <code>a0</code>
+chain to read — <code>p</code> is <code>0</code> there — and the class count settles every group on
+its own, so none of the caveats below apply; see
+<a href="#over-bp_i_n-every-summand-is-z3">Over <code>BP_*/I_n</code> every summand is <code>Z/3</code></a>
+above.</p>
 <p>The two halves of the evidence behave differently, so it is worth being
 precise about which conclusions are theorems:</p>
 <ul>
@@ -178,6 +266,20 @@ order <code>3^j</code>, and <code>j = 2</code> precisely when <code>3 | i</code>
 <p>For <code>S/α₁</code> the same chart has boxes in stems 0 <strong>and 4</strong> and nothing in
 stems 3, 13, 23, 29 — see <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a>, which checks the
 whole page against the sphere's automatically.</p>
+<h3 id="worked-examples-you-can-re-run">Worked examples you can re-run<a class="heading-anchor" href="#worked-examples-you-can-re-run">#</a></h3>
+<p><code>example_data/</code> holds three finished runs at <code>t = 30, length = 8</code> — the
+sphere, <code>S/α₁</code> and <code>S/p</code> — each as the tables the chart reads plus the SVG it
+produced. They are complete, so each redraws itself byte for byte:</p>
+<pre><code>./anss_chart.py 30 -c mod_p -d example_data -o /tmp/check.svg
+cmp /tmp/check.svg example_data/30_mod_panss_E2.svg    # identical</code></pre>
+<p>That makes them a regression test on the chart as well as an illustration: a
+change that alters any of the three shows up as a <code>cmp</code> failure. Each run
+contributes <code>AANSS_table.txt</code> (the classes), <code>AANSS_h0.txt</code> (α₁ lines),
+<code>AANSS_a0.txt</code> or <code>AANSS_a1.txt</code> (the summand structure — <code>a&lt;n&gt;</code> per the
+height) and <code>run_info.txt</code> (the ring). Drop any one of them and the redraw
+degrades: without <code>h0</code> the α₁ lines vanish, without <code>a0</code> the towers are
+understated, and without <code>run_info.txt</code> the <code>S/p</code> example refuses to draw at
+all rather than guess (§2).</p>
 <h2 id="6-truncation-the-page-is-cut-off-along-a-diagonal">6. Truncation: the page is cut off along a diagonal<a class="heading-anchor" href="#6-truncation-the-page-is-cut-off-along-a-diagonal">#</a></h2>
 <p>Neither axis is what limits the picture, and the y-axis is not capped at all
 — it grows to fit whatever the run produced. <strong>What cuts the page off is the

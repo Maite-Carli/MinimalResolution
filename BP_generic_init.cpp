@@ -8,22 +8,38 @@ void BPGenericInit::set_comodule(int rank, const std::vector<int> &degree,
 		          << ") does not match rank (" << rank << ")\n" << std::flush;
 	}
 
-	//wrap the caller's row function so every row is sorted by index (as
-	//every sparse vectors<matrix_index,R> elsewhere in this codebase is
-	//assumed to be) and so out-of-range indices are caught early, before
-	//they cause a confusing failure deep inside the resolution algorithm
+	//Wrap the caller's row function so that every row is
+	//  - reduced mod I_n (a no-op at height 0). At height n the comodule
+	//    lives over Gamma(n) = BP_*BP/I_n, and everything downstream assumes
+	//    its entries already do; since killing v_1,...,v_{n-1} is reduction
+	//    modulo a monomial ideal, reducing the input here is enough to keep
+	//    every product the resolution forms reduced as well. Coaction entries
+	//    are in the RIGHT-unit presentation -- outer exponent indexes the v_i
+	//    via eta_R, inner indexes the t_i -- see the warning at the top of
+	//    comodules.cpp;
+	//  - free of explicit zero terms, which scalor_mult and mon_multiply do
+	//    not filter and which could otherwise reach PolyOp::inverse as a
+	//    leading term;
+	//  - sorted by index, as every sparse vectors<matrix_index,R> elsewhere
+	//    in this codebase is assumed to be;
+	//and so that out-of-range indices are caught early, before they cause a
+	//confusing failure deep inside the resolution algorithm.
 	std::function<vectors<matrix_index,BPBP>(int)> checked_rows =
-	    [rank, &coaction_rows](int i) -> vectors<matrix_index,BPBP> {
+	    [rank, &coaction_rows, this](int i) -> vectors<matrix_index,BPBP> {
 		auto row = coaction_rows(i);
+		vectors<matrix_index,BPBP> result;
 		for(auto &tm : row.dataArray){
 			if((int)tm.ind < 0 || (int)tm.ind >= rank){
 				std::cerr << "BPGenericInit::set_comodule: coaction row " << i
 				          << " has an out-of-range index " << tm.ind
 				          << " (rank is " << rank << ")\n" << std::flush;
 			}
+			BPBP c = BP_oper.reduce_right_mod_I(tm.coeficient);
+			if(BP_oper.BPBP_opers.isZero(c)) continue;
+			result.push({tm.ind, c});
 		}
-		row.sort();
-		return row;
+		result.sort();
+		return result;
 	};
 
 	comod.base_module.rank = rank;
