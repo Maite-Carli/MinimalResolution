@@ -57,6 +57,16 @@ establish. Everything described here is on <code>prime3</code>, commits <code>74
 </tr>
 </tbody>
 </table></div>
+<h3 id="what-landed-alongside-it">What landed alongside it<a class="heading-anchor" href="#what-landed-alongside-it">#</a></h3>
+<p>A parallel session extended the same machinery, and <code>prime3</code> now also has:
+comodules that are free only over <code>BP_*/I_n</code> rather than <code>BP_*</code> (<code>mod_p</code>,
+<code>mod_p_v1</code> = V(1), <code>alpha_1_mod_p</code>, listed with their height by
+<code>./mr_BP_comod --list</code>); a <code>&lt;prefix&gt;run_info.txt</code> written by <code>BPInit</code>
+recording height, characteristic, <code>max_degree</code> and resolution length; a chart
+that reads it and <strong>gates the group-structure rules on the characteristic</strong>
+(§6); <code>example_data/</code> with reproducible runs and charts; and a <code>.gitignore</code>
+for executables and run output. The merge is clean and the verification suite
+below still passes on it.</p>
 <p>Quick start after a pull (needs <code>g++</code> with OpenMP, <code>libgmp-dev</code>, <code>python3</code>):</p>
 <pre><code class="language-sh">sh st_compiling &amp;&amp; sh BPtable_compile &amp;&amp; sh BP_compile &amp;&amp; sh BP_comod_compile
 ./mr_st 35 13 &amp;&amp; ./BPtab 35 &amp;&amp; ./mr_BP 35 12      # classic pipeline
@@ -159,6 +169,12 @@ by a <code>d2</code>, <code>v0^3[1-1]</code> by a <code>d3</code>.</p>
 there are none (all 15 sphere and 14 <code>S/α₁</code> bidegrees are exact); at
 <code>halfT=185, L=14</code> the sphere has 168 exact, 37 lower bounds (truncated) and
 64 open. <code>anss_chart.py</code> now reports that split after every run.</p>
+<p>All of the above is the <strong>characteristic-0</strong> story, i.e. a comodule free over
+<code>BP_*</code> itself. For a height-<code>n</code> run the base ring <code>BP_*/I_n</code> is an
+<code>F_p</code>-algebra, <code>p</code> kills everything, and every summand is <code>Z/p</code> — no boxes,
+no towers. The chart reads which case it is from <code>run_info.txt</code> rather than
+guessing (<code>--height</code> overrides when that file is missing), because getting it
+wrong would be silent.</p>
 <h2 id="7-what-is-verified-and-how-to-re-verify">7. What is verified, and how to re-verify<a class="heading-anchor" href="#7-what-is-verified-and-how-to-re-verify">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -212,7 +228,7 @@ chart shows <code>[0-1]</code> — the top cell's own generator — where <code>
 <li><strong>The 64 ambiguous bidegrees at 185.</strong> The Bockstein tables (<code>BocSS_table.txt</code>, with <code>B2A_table.txt</code> translating names) are the independent record of <code>p</code>-divisibility. The chart does not read them because <code>Boc.cpp:37-38</code> prints <code>2t - s</code> and drops the second coordinate — fixable there, or reconstructible from names.</li>
 <li><strong>A startup self-check</strong> asserting <code>h0() -&gt; t_1</code> and <code>η_R(v_1) -&gt; 0</code> would turn a repeat of §5 into a loud crash instead of a silent wrong model. Not added; five lines in <code>mr_BP_comod.cpp</code> if wanted.</li>
 <li><strong>Massey products</strong> (the grey dashed lines in Belmont's chart) are out of reach from these tables.</li>
-<li><strong><code>claude/code-output-explanation-vy84sm</code></strong> is an unmerged branch from a different session, "Document how to build, run and chart from scratch". It likely overlaps the README and <code>CHARTS.md</code> edits merged here, so expect conflicts and review it before merging.</li>
+<li><strong>Unmerged sibling branches.</strong> <code>claude/code-output-explanation-vy84sm</code> ("Document how to build, run and chart from scratch") and <code>claude/keen-edison-t29s2m</code> are from other sessions and are not on <code>prime3</code>; both plausibly overlap the README and <code>CHARTS.md</code>, so review before merging. Work from several sessions lands on <code>prime3</code> in parallel — fetch before assuming your local copy is current.</li>
 <li>Comodules are registered in <code>comodules.cpp</code>; <code>mr_BP_comod --list</code> shows them. Adding one is a builder function plus a table row. Nothing anywhere checks the comodule axioms.</li>
 </ul>
 <h2 id="9-practical-notes">9. Practical notes<a class="heading-anchor" href="#9-practical-notes">#</a></h2>

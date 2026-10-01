@@ -17,6 +17,18 @@ establish. Everything described here is on `prime3`, commits `74bbdf1` ..
 | `BP_mod_I.cpp` | **bug fix**: the two exponent slots were transposed (§5) |
 | `README.md`, [`BUILD_AND_RUN.md`](BUILD_AND_RUN.md), [`pipelines/BP.md`](pipelines/BP.md), [`pipelines/STEENROD.md`](pipelines/STEENROD.md) | the degree-convention correction (§3) |
 
+### What landed alongside it
+
+A parallel session extended the same machinery, and `prime3` now also has:
+comodules that are free only over `BP_*/I_n` rather than `BP_*` (`mod_p`,
+`mod_p_v1` = V(1), `alpha_1_mod_p`, listed with their height by
+`./mr_BP_comod --list`); a `<prefix>run_info.txt` written by `BPInit`
+recording height, characteristic, `max_degree` and resolution length; a chart
+that reads it and **gates the group-structure rules on the characteristic**
+(§6); `example_data/` with reproducible runs and charts; and a `.gitignore`
+for executables and run output. The merge is clean and the verification suite
+below still passes on it.
+
 Quick start after a pull (needs `g++` with OpenMP, `libgmp-dev`, `python3`):
 
 ```sh
@@ -153,6 +165,13 @@ there are none (all 15 sphere and 14 `S/α₁` bidegrees are exact); at
 `halfT=185, L=14` the sphere has 168 exact, 37 lower bounds (truncated) and
 64 open. `anss_chart.py` now reports that split after every run.
 
+All of the above is the **characteristic-0** story, i.e. a comodule free over
+`BP_*` itself. For a height-`n` run the base ring `BP_*/I_n` is an
+`F_p`-algebra, `p` kills everything, and every summand is `Z/p` — no boxes,
+no towers. The chart reads which case it is from `run_info.txt` rather than
+guessing (`--height` overrides when that file is missing), because getting it
+wrong would be silent.
+
 ## 7. What is verified, and how to re-verify
 
 | check | command | result |
@@ -188,10 +207,12 @@ chart shows `[0-1]` — the top cell's own generator — where `S/α₁` shows
   added; five lines in `mr_BP_comod.cpp` if wanted.
 - **Massey products** (the grey dashed lines in Belmont's chart) are out of
   reach from these tables.
-- **`claude/code-output-explanation-vy84sm`** is an unmerged branch from a
-  different session, "Document how to build, run and chart from scratch". It
-  likely overlaps the README and `CHARTS.md` edits merged here, so expect
-  conflicts and review it before merging.
+- **Unmerged sibling branches.** `claude/code-output-explanation-vy84sm`
+  ("Document how to build, run and chart from scratch") and
+  `claude/keen-edison-t29s2m` are from other sessions and are not on
+  `prime3`; both plausibly overlap the README and `CHARTS.md`, so review
+  before merging. Work from several sessions lands on `prime3` in parallel —
+  fetch before assuming your local copy is current.
 - Comodules are registered in `comodules.cpp`; `mr_BP_comod --list` shows
   them. Adding one is a builder function plus a table row. Nothing anywhere
   checks the comodule axioms.
