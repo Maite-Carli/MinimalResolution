@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Where this work stands — MinimalResolution docs</title>
+<title>The S/α₁ work: what was established — MinimalResolution docs</title>
 <link rel="stylesheet" href="./assets/style.css">
 </head>
 <body>
@@ -16,226 +16,153 @@
 </div>
 <div class="page-shell">
   <article>
-<h1 id="where-this-work-stands">Where this work stands<a class="heading-anchor" href="#where-this-work-stands">#</a></h1>
-<p>A handoff note covering the work done on <code>S/α₁</code>, the charts, and the
-degree-convention and <code>mod I</code> fixes. Written so that a fresh session (or a
-reader six months from now) can pick up without re-deriving what cost time to
-establish. Everything described here is on <code>prime3</code>, commits <code>74bbdf1</code> ..
-<code>4ca4485</code>.</p>
-<h2 id="1-what-was-added">1. What was added<a class="heading-anchor" href="#1-what-was-added">#</a></h2>
+<h1 id="the-sα₁-work-what-was-established">The S/α₁ work: what was established<a class="heading-anchor" href="#the-sα₁-work-what-was-established">#</a></h1>
+<p>Companion to <a href="../CLAUDE.html"><code>../CLAUDE.md</code></a>, which is the orientation note for
+the repository as a whole — read that first for build/run, the two-phase
+algorithm, the heights mechanism, the traps, and the checking recipe. This
+page covers what a separate strand of work established about <strong><code>S/α₁</code>, the
+gradings, and the group structures</strong>, with the arguments rather than just the
+conclusions, so they do not have to be re-derived. Commits <code>74bbdf1</code> ..
+<code>4ca4485</code> on <code>prime3</code>.</p>
+<h2 id="1-the-three-gradings">1. The three gradings<a class="heading-anchor" href="#1-the-three-gradings">#</a></h2>
+<p>Following Rognes's Definition 4.5 (<code>Adams_sseq.pdf</code>, in the repo root): an
+element of <code>E_r^{s,t}</code> has <strong>filtration <code>s</code></strong>, <strong>total degree <code>t-s</code></strong> (the
+stem), <strong>internal degree <code>t</code></strong>. Charts use <code>(t-s, s)</code>.</p>
+<p>The program prints a <em>third</em> grading beside those, which is the usual source
+of confusion:</p>
+<pre><code>v0^1v1^3[1-1]    |deg=(a, b)        a = t - s      the stem
+                                    b = s + i      NOT the filtration
+</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>file</th>
-<th>what it is</th>
+<th>piece</th>
+<th>meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ses_check.py</code></td>
-<td>checks a two-cell complex's E2 page against the sphere's via the cofiber long exact sequence; exits 1 on a mismatch</td>
+<td><code>i</code></td>
+<td>algebraic Novikov filtration = total number of <code>v</code>'s in the name, <code>v0 = p</code> included (<code>algNov.cpp:10-16</code>, <code>MinimalResolution.pdf</code> p. 9)</td>
 </tr>
 <tr>
-<td><a href="SES_CHECK.html"><code>SES_CHECK.md</code></a></td>
-<td>the derivation behind it, the controls, and the limitations</td>
+<td><code>[s-j]</code></td>
+<td>the <code>j</code>-th generator of the <code>s</code>-th term of the minimal resolution — Rognes's <code>γ_{s,j}</code>. <strong><code>s</code> is read off this bracket</strong>, never off <code>b</code> (<code>anss_chart.py:81-83</code>)</td>
 </tr>
 <tr>
-<td><code>anss_chart.py</code></td>
-<td>rewritten: one mark per <strong>cyclic summand</strong> (box / dot / rings), labelled, in the convention of Belmont's published p=3 chart</td>
-</tr>
-<tr>
-<td><a href="CHARTS.html"><code>CHARTS.md</code></a></td>
-<td>rewritten around that, plus what the glyphs prove and what they assume</td>
-</tr>
-<tr>
-<td><code>BP_mod_I.cpp</code></td>
-<td><strong>bug fix</strong>: the two exponent slots were transposed (§5)</td>
-</tr>
-<tr>
-<td><code>README.md</code>, <a href="BUILD_AND_RUN.html"><code>BUILD_AND_RUN.md</code></a>, <a href="pipelines/BP.html"><code>pipelines/BP.md</code></a>, <a href="pipelines/STEENROD.html"><code>pipelines/STEENROD.md</code></a></td>
-<td>the degree-convention correction (§3)</td>
+<td><code>t</code></td>
+<td><code>= a + s</code>; recoverable, never printed</td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="what-landed-alongside-it">What landed alongside it<a class="heading-anchor" href="#what-landed-alongside-it">#</a></h3>
-<p>A parallel session extended the same machinery, and <code>prime3</code> now also has:
-comodules that are free only over <code>BP_*/I_n</code> rather than <code>BP_*</code> (<code>mod_p</code>,
-<code>mod_p_v1</code> = V(1), <code>alpha_1_mod_p</code>, listed with their height by
-<code>./mr_BP_comod --list</code>); a <code>&lt;prefix&gt;run_info.txt</code> written by <code>BPInit</code>
-recording height, characteristic, <code>max_degree</code> and resolution length; a chart
-that reads it and <strong>gates the group-structure rules on the characteristic</strong>
-(§6); <code>example_data/</code> with reproducible runs and charts; and a <code>.gitignore</code>
-for executables and run output. The merge is clean and the verification suite
-below still passes on it.</p>
-<p>Quick start after a pull (needs <code>g++</code> with OpenMP, <code>libgmp-dev</code>, <code>python3</code>):</p>
-<pre><code class="language-sh">sh st_compiling &amp;&amp; sh BPtable_compile &amp;&amp; sh BP_compile &amp;&amp; sh BP_comod_compile
-./mr_st 35 13 &amp;&amp; ./BPtab 35 &amp;&amp; ./mr_BP 35 12      # classic pipeline
-./mr_BP_comod 35 12 alpha_1                       # S/α₁
-./anss_chart.py 35 -c alpha_1                     # chart
-./ses_check.py 35 -c alpha_1                      # 21/21 bidegrees agree
-</code></pre>
-<h2 id="2-gradings-the-thing-to-get-right-first">2. Gradings — the thing to get right first<a class="heading-anchor" href="#2-gradings-the-thing-to-get-right-first">#</a></h2>
-<p>Following Rognes's Definition 4.5 (<code>Adams_sseq.pdf</code>, on this branch): an
-element of <code>E_r^{s,t}</code> has <strong>filtration <code>s</code></strong>, <strong>total degree <code>t-s</code></strong> (the
-stem), <strong>internal degree <code>t</code></strong>. Charts use <code>(t-s, s)</code> coordinates.</p>
-<p>The program prints a <em>third</em> grading alongside these, and that is the usual
-source of confusion:</p>
-<pre><code>v0^1v1^3[1-1]    |deg=(a, b)
-                   a = t - s          the stem
-                   b = s + i          NOT the filtration
-</code></pre>
-<ul>
-<li><code>i</code> = <strong>algebraic Novikov filtration</strong> = the total number of <code>v</code>'s in the name, <code>v0 = p</code> included (<code>algNov.cpp:10-16</code>; <code>MinimalResolution.pdf</code> p. 9).</li>
-<li><code>[s-j]</code> = the <code>j</code>-th generator of the <code>s</code>-th term of the minimal resolution — exactly Rognes's <code>γ_{s,j}</code>. <strong><code>s</code> is read off this bracket</strong>, never off <code>b</code>. <code>anss_chart.py:81-83</code> does precisely that.</li>
-<li><code>t = a + s</code>, recoverable, never printed.</li>
-</ul>
-<p>The classic trap: <code>v1^1[1-0]</code> is α₂, filtration 1, printed at height 2.</p>
-<h2 id="3-the-command-line-arguments">3. The command-line arguments<a class="heading-anchor" href="#3-the-command-line-arguments">#</a></h2>
-<p><strong><code>argv[1]</code> is the maximal internal degree <code>t</code>, not half of it.</strong> The README
-said "half of t"; that was inherited from Guozhen Wang's p=2 code and is
-wrong here. <code>exponents.cpp:31</code> stores full topological degrees
-(<code>|v_n| = |t_n| = 2(3^n-1)</code>, so <code>|v_1| = 4</code>) and <code>monomial_index</code> keeps every
-monomial of degree <code>d &lt;= argv[1]</code> (<code>mon_index.cpp:44</code>), on both the BP side
-(<code>BP.cpp:8</code>) and the Steenrod side (<code>steenrod.cpp:5</code>). Measured, not inferred:
-<code>./mr_st 24 6</code> stops at generator degree 24; <code>./mr_BP_comod 24 8</code> has β₁² at
-<code>t = 24</code> while the same run at 23 stops at <code>t = 20</code>.</p>
-<p><code>argv[2]</code> is the resolution length <code>L</code>, and it caps the <em>other</em> direction:
-only classes with <code>s + i &lt; L</code> are printed (<code>algNov.cpp:201-205</code>,
-<code>BP_init.cpp:34</code>). That is why the <code>v0</code>-towers stop where they do — 12 steps
-in stem 0 at <code>L = 12</code>.</p>
-<p>Consequence worth remembering: since <code>t = stem + s</code>, <strong>the computed region is
-cut off along a diagonal</strong>, not at the top of either axis. At <code>halfT=35</code> the
-sphere has a class in stem 31 (<code>t = 32</code>) but not in stem 30, because β₁³ sits
-at <code>s = 6</code>, i.e. <code>t = 36</code>. The chart draws that diagonal now.</p>
-<h2 id="4-bpbps-exponent-slots">4. <code>BPBP</code>'s exponent slots<a class="heading-anchor" href="#4-bpbps-exponent-slots">#</a></h2>
-<p><code>BPBP = polynomial&lt;BP&gt;</code> is <strong>not</strong> "polynomial in the <code>t_i</code> with <code>BP_*</code>
-coefficients". The <strong>outer</strong> exponent indexes the <code>v_i</code> and the <strong>inner</strong>
-(coefficient) exponent indexes the <code>t_i</code> (<code>BP.cpp:69</code>, and the warning atop
-<code>comodules.cpp</code>). So:</p>
-<ul>
-<li><code>BP_oper.h0()</code> is <code>t_1</code> — outer 0, inner exponent 1. Use it.</li>
-<li><code>BPBP_opers.monomial(singleVar(1,1), unit(1))</code> is <code>η_R(v_1)</code>, <strong>not</strong> <code>t_1</code>.</li>
-</ul>
-<h2 id="5-the-bug-that-was-found-and-fixed-35c6370">5. The bug that was found and fixed (<code>35c6370</code>)<a class="heading-anchor" href="#5-the-bug-that-was-found-and-fixed-35c6370">#</a></h2>
-<p><code>reduce_BPBP_mod_I</code> was written for the layout the type name suggests, so it
-read both slots backwards. Probed against the real types:</p>
-<pre><code>before:  t_1 -&gt; 0        η_R(v_1) -&gt; t_1
-after:   t_1 -&gt; t_1      η_R(v_1) -&gt; 0
-</code></pre>
-<p>Every off-diagonal coaction entry is a polynomial in the <code>t_i</code>, so the old
-code reduced all of them to zero and handed phase 2 a <strong>split</strong> comodule —
-the mod-<code>I</code> model of <code>S⁰ ∨ S⁴</code> in place of <code>S/α₁</code>.</p>
-<p>Effect on results, measured: <code>sphere</code> and <code>triv_01</code> are byte-identical before
-and after (their coaction is <code>1</code>, which reduces correctly either way, so the
-documented <code>mr_BP</code>-vs-<code>mr_BP_comod</code> regression could never catch this).
-<code>alpha_1</code>'s tables changed <strong>only in generator indices</strong> inside class names
-(<code>[1-1]→[1-0]</code>, …); the degree profile, the summand structure and the
-α₁-multiplication edges are identical, and <code>ses_check.py</code> still reports 21/21.
-The BP side always used the true coaction and the model only guided the
-generator search — so the damage was indexing, not answers. That is luck, not
-a guarantee.</p>
-<p><strong>Two values pin the convention down; re-check them after touching that
-file</strong>: <code>h0()</code> must reduce to <code>t_1</code>, and <code>η_R(v_1)</code> must reduce to <code>0</code>.</p>
-<h2 id="6-the-mathematics-established">6. The mathematics established<a class="heading-anchor" href="#6-the-mathematics-established">#</a></h2>
-<h3 id="the-cofiber-sequence">The cofiber sequence<a class="heading-anchor" href="#the-cofiber-sequence">#</a></h3>
-<p><code>BP_*</code> is even, so <code>α₁</code> acts as 0 on BP-homology and</p>
+<p>The standing trap: <code>v1^1[1-0]</code> is α₂, filtration 1, printed at height 2.</p>
+<p>Because <code>t = stem + s</code>, the computed region is <strong>cut off along a diagonal</strong>,
+not at the top of either axis — at <code>t = 35</code> the sphere has a class in stem 31
+(<code>t = 32</code>) but not in stem 30, where β₁³ sits at <code>s = 6</code>, i.e. <code>t = 36</code>. The
+chart draws that diagonal. A class missing high up usually means raise the
+<em>first</em> argument, not the second.</p>
+<h2 id="2-the-cofiber-sequence-and-the-class-that-looks-wrong">2. The cofiber sequence, and the class that looks wrong<a class="heading-anchor" href="#2-the-cofiber-sequence-and-the-class-that-looks-wrong">#</a></h2>
+<p><code>BP_*</code> is even, so α₁ acts as 0 on BP-homology and</p>
 <pre><code>0 --&gt; BP_* --&gt; BP_*(S/α₁) --&gt; Σ⁴BP_* --&gt; 0
 </code></pre>
-<p>(shift 4, not 3 — the top <em>cell</em> is <code>e⁴</code>). Split over <code>BP_*</code>, <strong>not</strong> over
-<code>BP_*BP</code>. The <code>BP_*</code>-splitting is what keeps the cobar complexes exact, hence
-gives a long exact sequence; the failure of a comodule splitting is the
-connecting map, which is the Yoneda product with the extension class — the
-off-diagonal <code>t_1</code>, i.e. <code>α₁</code>. In chart coordinates:</p>
-<pre><code>0 -&gt; coker(α₁ into (n,s)) -&gt; E2(S/α₁)(n,s) -&gt; ker(α₁ out of (n-4,s)) -&gt; 0
-</code></pre>
-<p>α₁-multiplication is <code>(stem +3, s +1)</code>; the top cell shifts <code>(stem +4, s +0)</code>.</p>
-<h3 id="the-40-class-the-one-that-looks-wrong-and-isnt">The (4,0) class — the one that looks wrong and isn't<a class="heading-anchor" href="#the-40-class-the-one-that-looks-wrong-and-isnt">#</a></h3>
-<p><code>ker(α₁ : Ext^{0,0} → Ext^{1,4}) = 3Z_(3) ≠ 0</code>, because <code>α₁</code> has order 3. So
-there <strong>is</strong> a class in stem 4, filtration 0. Verified by hand, independently
-of the LES and of the code: with <code>η_R(v_1) = v_1 + 3t_1</code>,</p>
+<p>— shift 4, not 3: the top <em>cell</em> is <code>e⁴</code>. Split over <code>BP_*</code>, <strong>not</strong> over
+<code>BP_*BP</code>. The <code>BP_*</code>-splitting keeps the cobar complexes exact, hence gives a
+long exact sequence; the failure of a comodule splitting <em>is</em> the connecting
+map, which is the Yoneda product with the extension class — the off-diagonal
+<code>t_1</code>, i.e. α₁. See <a href="SES_CHECK.html"><code>SES_CHECK.md</code></a> for the full derivation and
+for <code>ses_check.py</code>, which checks a run against it bidegree by bidegree.</p>
+<p>The one result worth recording here, because it is the thing that looks like a
+bug and is not: <strong>there is a class in stem 4, filtration 0</strong>, because
+<code>ker(α₁ : Ext^{0,0} → Ext^{1,4}) = 3Z_(3) ≠ 0</code> — α₁ has order 3, so three
+times the top cell survives even though the top cell itself does not. Checked
+by hand, independently of the long exact sequence and of the code, using
+<code>η_R(v_1) = v_1 + 3t_1</code> and <code>D(am) = η_L(a)D(m) + (η_L - η_R)(a) ⊗ m</code>:</p>
 <pre><code>Ext^{0,4}(BP_*(S/α₁)) = Prim(M)_4 = Z_(3){ v_1x_0 + 3x_4 }
+Ext^{0,8}(BP_*(S/α₁)) = 0                   (same computation, degree 8)
 </code></pre>
-<p>and the same computation gives <code>Prim(M)_8 = 0</code>, matching the chart. Stem 0 is
-the only place this can happen — it is the only bidegree where the sphere's
-Ext is not 3-torsion.</p>
-<h3 id="group-structures">Group structures<a class="heading-anchor" href="#group-structures">#</a></h3>
-<p>A non-zero <code>a0</code> entry is sound (<code>3x ≠ 0</code>); a <code>-&gt; o</code> entry is not (<code>3x</code> may
-have jumped filtration); the class count is exact. So <strong>one <code>a0</code> chain
-exhausting a bidegree pins the group down</strong> (length <code>n</code> plus an element of
-order <code>3^n</code> forces cyclic). That is how <code>S/α₁</code> gets <code>Z/9</code> in (7,1) and <code>Z/27</code>
-in (11,1). The Bockstein tables confirm both independently: <code>v0^2[1-0]</code> dies
-by a <code>d2</code>, <code>v0^3[1-1]</code> by a <code>d3</code>.</p>
-<p>Where this is <em>not</em> settled: bidegrees holding several chains. At <code>halfT=35</code>
-there are none (all 15 sphere and 14 <code>S/α₁</code> bidegrees are exact); at
-<code>halfT=185, L=14</code> the sphere has 168 exact, 37 lower bounds (truncated) and
-64 open. <code>anss_chart.py</code> now reports that split after every run.</p>
-<p>All of the above is the <strong>characteristic-0</strong> story, i.e. a comodule free over
-<code>BP_*</code> itself. For a height-<code>n</code> run the base ring <code>BP_*/I_n</code> is an
-<code>F_p</code>-algebra, <code>p</code> kills everything, and every summand is <code>Z/p</code> — no boxes,
-no towers. The chart reads which case it is from <code>run_info.txt</code> rather than
-guessing (<code>--height</code> overrides when that file is missing), because getting it
-wrong would be silent.</p>
-<h2 id="7-what-is-verified-and-how-to-re-verify">7. What is verified, and how to re-verify<a class="heading-anchor" href="#7-what-is-verified-and-how-to-re-verify">#</a></h2>
+<p>both matching the run. The chart names that generator <code>v1^1[0-0]</code>, after its
+leading term <code>v_1x_0</code> — the names are coordinates in the <em>resolution</em>, where
+no <code>x_4</code> exists, not in <code>M</code>. For <code>S⁰ ∨ S⁴</code> the same bidegree instead shows
+<code>[0-1]</code>, the top cell's own generator: that difference is exactly the <code>+3x_4</code>.</p>
+<p>Stem 0 is the only bidegree where this can happen, since it is the only place
+the sphere's Ext is not 3-torsion.</p>
+<h2 id="3-which-group-structures-are-proved">3. Which group structures are proved<a class="heading-anchor" href="#3-which-group-structures-are-proved">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>evidence</th>
+<th>strength</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a non-zero <code>a0</code> entry <code>x -&gt; y</code></td>
+<td><strong>sound</strong>: the leading term of <code>3x</code> is non-zero, so <code>3x ≠ 0</code></td>
+</tr>
+<tr>
+<td>an <code>a0</code> entry <code>x -&gt; o</code></td>
+<td><strong>not sound</strong>: <code>3x</code> may have jumped filtration — a hidden extension</td>
+</tr>
+<tr>
+<td>the class count in a bidegree</td>
+<td><strong>exact</strong>: the classes are an F₃-basis of <code>gr Ext</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>So a chain gives a lower bound on the order and the count gives the exact
+length, and <strong>when one chain exhausts a bidegree the group is pinned down</strong> —
+length <code>n</code> plus an element of order <code>3^n</code> forces cyclic. That is why <code>S/α₁</code>
+has <code>Z/9</code> in (7,1) and <code>Z/27</code> in (11,1), not <code>Z/3 ⊕ Z/3</code> and <code>Z/9 ⊕ Z/3</code>. The
+Bockstein tables confirm both independently: <code>v0^2[1-0]</code> dies by a <code>d2</code>,
+<code>v0^3[1-1]</code> by a <code>d3</code>.</p>
+<p>Bidegrees holding several chains are <em>not</em> settled — a hidden extension could
+merge them. <code>anss_chart.py</code> reports the census after every run: at <code>t=35</code> all
+15 sphere and 14 <code>S/α₁</code> bidegrees are exact; at <code>t=185, L=14</code> the sphere has
+168 exact, 37 lower bounds (truncated towers), 64 open. The Bockstein tables
+(<code>BocSS_table.txt</code>, with <code>B2A_table.txt</code> translating names) are the way into
+the open ones; the chart does not read them because <code>Boc.cpp:37-38</code> prints
+<code>2t - s</code> and drops the second coordinate.</p>
+<p>All of this is the <strong>characteristic-0</strong> story. Over <code>BP_*/I_n</code> every summand
+is <code>Z/p</code>; the chart reads which case it is from <code>run_info.txt</code>.</p>
+<h2 id="4-results-on-record">4. Results on record<a class="heading-anchor" href="#4-results-on-record">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>check</th>
-<th>command</th>
-<th>result</th>
+<th>expected</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>generic path == shipped <code>mr_BP</code></td>
-<td><code>diff 35_BPAANSS_table.txt 35_sphereBPAANSS_table.txt</code></td>
-<td>byte-identical (algNov and Bockstein)</td>
-</tr>
-<tr>
-<td><code>S/α₁</code> against the LES</td>
 <td><code>./ses_check.py 35 -c alpha_1</code></td>
-<td>21/21 bidegrees, all sharp</td>
+<td>21 bidegrees agree, all sharp</td>
 </tr>
 <tr>
-<td>same at other ranges</td>
-<td><code>20 / 6</code>, <code>28 / 9</code></td>
+<td>the same at <code>t=20</code> / <code>t=28</code></td>
 <td>11/11, 17/17</td>
 </tr>
 <tr>
-<td>split control</td>
 <td><code>./ses_check.py 35 -c triv_01 --attaching none</code></td>
-<td>28/28</td>
+<td>28/28 (split control)</td>
 </tr>
 <tr>
-<td>negative control</td>
 <td><code>./ses_check.py 35 -c alpha_1 --attaching none --top-cell 4</code></td>
-<td>8 mismatches, as it should</td>
+<td>8 mismatches — the negative control</td>
 </tr>
 <tr>
-<td>sphere chart vs published charts</td>
-<td><code>./anss_chart.py 35</code></td>
-<td>matches, including <code>Z/9</code> at stems 11 and 23</td>
+<td>sphere chart at <code>t=35</code></td>
+<td>matches the published p=3 charts, including <code>Z/9</code> at stems 11 and 23</td>
 </tr>
 </tbody>
 </table></div>
-<p>A second negative control worth knowing about: adding a scratch comodule with
-<code>rank = 2</code>, <code>degree = {0,4}</code> and the <strong>identity</strong> coaction (<code>S⁰ ∨ S⁴</code>) and
-checking it against the <code>S/α₁</code> prediction fails in the same 8 bidegrees. Its
-chart shows <code>[0-1]</code> — the top cell's own generator — where <code>S/α₁</code> shows
-<code>v1^1[0-0]</code>.</p>
-<h2 id="8-open-threads">8. Open threads<a class="heading-anchor" href="#8-open-threads">#</a></h2>
+<p>A second negative control worth knowing: a scratch comodule with <code>rank = 2</code>,
+<code>degree = {0,4}</code> and the <strong>identity</strong> coaction (<code>S⁰ ∨ S⁴</code>), checked against
+the <code>S/α₁</code> prediction, fails in the same 8 bidegrees.</p>
+<h2 id="5-still-open-from-this-strand">5. Still open from this strand<a class="heading-anchor" href="#5-still-open-from-this-strand">#</a></h2>
 <ul>
-<li><strong>β₁-divisibility</strong> (Belmont's chart colours those classes blue) and <strong>α₂ lines</strong> are not available: <code>BPInit::mult_table</code> only builds the <code>h0</code> table on the algebraic Novikov side, and <code>mult_theta</code>'s <code>theta_i</code> tables are Bockstein-side. Both would be a <code>mult_table(&lt;class&gt;, &lt;degree&gt;, "&lt;name&gt;.txt")</code> call in <code>mr_BP_comod</code> plus one branch in the chart script, which already parses any multiplication table. <code>BP_oper.thetas()</code> has β₁.</li>
-<li><strong>The 64 ambiguous bidegrees at 185.</strong> The Bockstein tables (<code>BocSS_table.txt</code>, with <code>B2A_table.txt</code> translating names) are the independent record of <code>p</code>-divisibility. The chart does not read them because <code>Boc.cpp:37-38</code> prints <code>2t - s</code> and drops the second coordinate — fixable there, or reconstructible from names.</li>
-<li><strong>A startup self-check</strong> asserting <code>h0() -&gt; t_1</code> and <code>η_R(v_1) -&gt; 0</code> would turn a repeat of §5 into a loud crash instead of a silent wrong model. Not added; five lines in <code>mr_BP_comod.cpp</code> if wanted.</li>
-<li><strong>Massey products</strong> (the grey dashed lines in Belmont's chart) are out of reach from these tables.</li>
-<li><strong>Unmerged sibling branches.</strong> <code>claude/code-output-explanation-vy84sm</code> ("Document how to build, run and chart from scratch") and <code>claude/keen-edison-t29s2m</code> are from other sessions and are not on <code>prime3</code>; both plausibly overlap the README and <code>CHARTS.md</code>, so review before merging. Work from several sessions lands on <code>prime3</code> in parallel — fetch before assuming your local copy is current.</li>
-<li>Comodules are registered in <code>comodules.cpp</code>; <code>mr_BP_comod --list</code> shows them. Adding one is a builder function plus a table row. Nothing anywhere checks the comodule axioms.</li>
-</ul>
-<h2 id="9-practical-notes">9. Practical notes<a class="heading-anchor" href="#9-practical-notes">#</a></h2>
-<ul>
-<li><code>libgmp-dev</code> is needed for <code>BPtab</code> only; the two Python scripts need no packages.</li>
-<li>Runtimes on a cloud container: <code>35 / 12</code> is seconds; <code>BPtab 185</code> ≈ 8 s and <code>mr_BP_comod 185 14 sphere</code> ≈ 209 s, giving 620 classes out to stem 182.</li>
-<li>The <code>&lt;halfT&gt;</code> placeholder in filenames and CLI flags is a misnomer kept for compatibility; its value is <code>t</code>.</li>
+<li><strong>β₁-divisibility</strong> (the blue classes in Belmont's published chart) and <strong>α₂ lines</strong>: both need a <code>mult_table(&lt;class&gt;, &lt;degree&gt;, "&lt;name&gt;.txt")</code> call in <code>mr_BP_comod</code> plus one branch in <code>anss_chart.py</code>, which already parses any multiplication table. <code>BP_oper.thetas()</code> has β₁.</li>
+<li><strong>Massey products</strong> (her grey dashed lines) are out of reach from these tables.</li>
+<li><strong>A startup self-check</strong> asserting <code>h0() -&gt; t_1</code> and <code>η_R(v_1) -&gt; 0</code> would turn a repeat of the <code>reduce_BPBP_mod_I</code> bug into a loud crash instead of a silent split comodule. Five lines in <code>mr_BP_comod.cpp</code>; not added.</li>
 </ul>
   <footer class="page-footer">
     <span>MinimalResolution documentation</span>

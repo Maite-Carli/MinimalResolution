@@ -15,6 +15,12 @@ Everything lives on branch **`prime3`**. There is no CI and no test suite —
 verification is the recipe in "Checking a change" below, and it matters,
 because almost every failure mode here is silent.
 
+A separate strand of work is written up in
+[`docs/HANDOFF.md`](docs/HANDOFF.md): the three gradings and which one the
+program actually prints, the cofiber long exact sequence for `S/α₁` and the
+`Ext^0` class it forces in stem 4, and which group structures the `a0` tables
+prove rather than suggest.
+
 ## Build and run
 
 ```sh
@@ -95,8 +101,10 @@ and height-aware `load_etaL`/`load_R2L`/`load_delta` (`BP.cpp`);
    So `BPBP_opers.monomial(singleVar(1,1), unit(1))` is `η_R(v_1)`, **not**
    `t_1`. Use `BP_Op::h0()`/`t1()`.
 2. **That exact confusion was a live bug.** `reduce_BPBP_mod_I` had the slots
-   transposed (fixed in `35c6370`): it sent `t_1 ↦ 0` and `η_R(v_1) ↦ v_1`,
-   so phase 1 silently received a *split* comodule. Invisible for the sphere
+   transposed (fixed in `35c6370`): it sent `t_1 ↦ 0` and `η_R(v_1) ↦ t_1`
+   (the `v`-exponent reinterpreted as a `t`-exponent, since `P`'s monomials
+   use the same encoding), so phase 1 silently received a *split* comodule.
+   Invisible for the sphere
    and for split examples — only a nonzero off-diagonal coaction entry
    exposes it. Probe any change here with the two values `h0()` and
    `η_R(v_1)`.

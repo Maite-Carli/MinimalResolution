@@ -321,10 +321,11 @@ is carried entirely by that connecting map.
 
 ## Documentation
 
-**Picking this up after a break?** [`docs/HANDOFF.md`](docs/HANDOFF.md) is the
-orientation note: the grading conventions, what the two command-line arguments
-actually bound, the `mod I` slot bug and its fix, what has been verified and
-how to re-verify it, and what is still open.
+**Picking this up after a break?** [`CLAUDE.md`](CLAUDE.md) is the orientation
+note for the repository as a whole, and [`docs/HANDOFF.md`](docs/HANDOFF.md)
+covers the `S/α₁` strand: the three gradings and which one the program prints,
+the cofiber long exact sequence, and which group structures the tables prove
+rather than suggest.
 
 This codebase had no architecture documentation beyond this README and
 inline comments. [`docs/index.html`](docs/index.html) is a generated
