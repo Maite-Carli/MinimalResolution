@@ -334,3 +334,11 @@ motivic pipeline) are hardcoded to p=2 — the docs explain why this is an
 independent cross-check rather than an unfinished port — and there's some
 dead/duplicate code left over from earlier refactors — see
 `docs/ARCHITECTURE.md` §6–7 for specifics.
+
+[`PROJECT_LOG.md`](PROJECT_LOG.md) is a shorter companion: what was added
+when and why, and — more usefully — the handful of non-guessable traps in
+this code (reversed `BPBP` exponent slots, why resolving directly over
+`BP_*` silently returns nothing, the degree convention) together with what
+has actually been verified by measurement versus what is merely assumed.
+Worth reading before changing a coaction or trusting a new comodule's
+output.
